@@ -1,0 +1,133 @@
+name: task-platform
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  reverse-proxy:
+    image: "${PROXY_IMAGE:-task-platform-proxy:1.0.0}"
+    platform: "${APP_PLATFORM:-linux/amd64}"
+    pull_policy: "${IMAGE_PULL_POLICY:-missing}"
+    restart: unless-stopped
+    ports:
+      - "${PUBLIC_PORT:-8080}:8080"
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks: [frontend]
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/proxy-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  web:
+    image: "${WEB_IMAGE:-task-platform-web:1.0.0}"
+    platform: "${APP_PLATFORM:-linux/amd64}"
+    pull_policy: "${IMAGE_PULL_POLICY:-missing}"
+    restart: unless-stopped
+    environment:
+      PORT: "${WEB_PORT:-3000}"
+    expose:
+      - "3000"
+    networks: [frontend]
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: "${API_IMAGE:-task-platform-api:1.0.0}"
+    platform: "${APP_PLATFORM:-linux/amd64}"
+    pull_policy: "${IMAGE_PULL_POLICY:-missing}"
+    restart: unless-stopped
+    environment:
+      APP_ENV: "${APP_ENV:-production}"
+      APP_PORT: "${APP_PORT:-3001}"
+      DATABASE_URL: "${DATABASE_URL}"
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
+      REGISTRATION_INVITE_CODE: "${REGISTRATION_INVITE_CODE:-}"
+      JWT_ACCESS_EXPIRES_IN: "${JWT_ACCESS_EXPIRES_IN:-15m}"
+      JWT_REFRESH_EXPIRES_IN: "${JWT_REFRESH_EXPIRES_IN:-30d}"
+      PUBLIC_APP_URL: "${PUBLIC_APP_URL}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      COOKIE_DOMAIN: "${COOKIE_DOMAIN:-}"
+      TRUST_PROXY: "${TRUST_PROXY:-1}"
+      UPLOAD_DIR: "${UPLOAD_DIR:-/data/uploads}"
+      JOURNAL_IMPORT_DIR: "${JOURNAL_IMPORT_DIR:-/data/journal-import}"
+      MAX_UPLOAD_SIZE_MB: "${MAX_UPLOAD_SIZE_MB:-20}"
+      MAX_FILES_PER_REQUEST: "${MAX_FILES_PER_REQUEST:-10}"
+    expose:
+      - "3001"
+    volumes:
+      - "${UPLOAD_DATA_PATH:-./data/uploads}:/data/uploads"
+      - "${JOURNAL_IMPORT_PATH:-./data/journal-import}:/data/journal-import:ro"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [frontend, backend]
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  db:
+    image: "${POSTGRES_IMAGE:-postgres:17.5-bookworm}"
+    platform: "${APP_PLATFORM:-linux/amd64}"
+    pull_policy: "${IMAGE_PULL_POLICY:-missing}"
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - "${POSTGRES_DATA_PATH:-./data/postgres}:/var/lib/postgresql/data"
+      - "${BACKUP_DATA_PATH:-./data/backups}:/data/backups"
+    networks: [backend]
+    shm_size: 256mb
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+networks:
+  frontend:
+  backend:
+    internal: true

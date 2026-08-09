@@ -1,0 +1,15 @@
+services:
+  reverse-proxy:
+    build:
+      context: ./infrastructure/nginx
+      dockerfile: Dockerfile
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile

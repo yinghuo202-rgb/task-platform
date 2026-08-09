@@ -1,0 +1,23 @@
+{
+  "name": "task-platform",
+  "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @task-platform/api --filter @task-platform/web dev",
+    "dev:db:local": "node scripts/local-postgres.mjs",
+    "dev:api:local": "APP_ENV=development APP_PORT=3101 DATABASE_URL=postgresql://task_platform:task_platform_local@127.0.0.1:55432/task_platform JWT_ACCESS_SECRET=local_access_secret_change_before_production JWT_REFRESH_SECRET=local_refresh_secret_change_before_production PUBLIC_APP_URL=http://localhost:3000 COOKIE_SECURE=false UPLOAD_DIR=../../data/uploads JOURNAL_IMPORT_DIR=../../data/journal-import pnpm --filter @task-platform/api dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter @task-platform/web test:e2e",
+    "db:generate": "pnpm --filter @task-platform/api db:generate",
+    "db:migrate": "pnpm --filter @task-platform/api db:migrate",
+    "db:seed": "pnpm --filter @task-platform/api db:seed",
+    "db:seed:companion": "pnpm --filter @task-platform/api db:seed:companion",
+    "admin:create": "pnpm --filter @task-platform/api admin:create"
+  },
+  "devDependencies": {
+    "embedded-postgres": "18.4.0-beta.17"
+  }
+}

@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1.7
+FROM --platform=linux/amd64 node:24.14.0-bookworm-slim AS sharpdeps
+WORKDIR /sharp
+RUN npm init -y \
+  && npm install --omit=dev --ignore-scripts=false sharp@0.34.5
+
+FROM --platform=linux/amd64 node:24.14.0-bookworm-slim AS runner
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+WORKDIR /app
+RUN groupadd --gid 10001 taskapp \
+  && useradd --uid 10001 --gid taskapp --no-create-home --shell /usr/sbin/nologin taskapp
+COPY --chown=taskapp:taskapp standalone ./
+COPY --from=sharpdeps --chown=taskapp:taskapp /sharp/node_modules/@img ./node_modules/@img
+COPY --chown=taskapp:taskapp static ./apps/web/.next/static
+COPY --chown=taskapp:taskapp public ./apps/web/public
+RUN node -e "require('./node_modules/.pnpm/sharp@0.34.5/node_modules/sharp'); console.log('sharp amd64 runtime ok')"
+USER taskapp
+EXPOSE 3000
+CMD ["node", "apps/web/server.js"]

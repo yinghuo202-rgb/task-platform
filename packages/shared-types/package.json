@@ -1,0 +1,16 @@
+{
+  "name": "@task-platform/shared-types",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "node -e \"console.log('shared-types: no runtime tests')\""
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  }
+}
