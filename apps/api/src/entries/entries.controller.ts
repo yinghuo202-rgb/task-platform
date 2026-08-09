@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
+import type { Response } from "express";
 import type { AuthUser } from "../common/auth-context";
 import { CurrentUser, Roles } from "../common/decorators";
 import { UserRole } from "../generated/prisma/enums";
@@ -14,6 +15,15 @@ export class EntriesController {
   @Get()
   list(@CurrentUser() user: AuthUser, @Query() query: ListEntriesDto) {
     return this.entries.list(user, query);
+  }
+
+  @Get("assets/:storageName")
+  async asset(
+    @CurrentUser() user: AuthUser,
+    @Param("storageName") storageName: string,
+    @Res() response: Response,
+  ) {
+    return response.sendFile(await this.entries.journalAsset(user, storageName));
   }
 
   @Get(":id")

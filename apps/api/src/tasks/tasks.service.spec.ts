@@ -35,4 +35,33 @@ describe("task project visibility", () => {
       }),
     }));
   });
+
+  it("lists only the other person's open tasks as available to claim", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = {
+      task: { findMany, count: vi.fn().mockResolvedValue(0) },
+      $transaction: vi.fn().mockImplementation(async (operations) => Promise.all(operations)),
+    } as unknown as PrismaService;
+    const service = new TasksService(prisma, {} as AuditService, {} as ProjectsService);
+
+    await service.list({
+      page: 1,
+      pageSize: 20,
+      sort: "createdAt",
+      order: "desc",
+      scope: "available",
+    }, {
+      id: "11111111-1111-4111-8111-111111111111",
+      sessionId: "session",
+      role: "USER",
+    });
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        publisherId: { not: "11111111-1111-4111-8111-111111111111" },
+        status: "PUBLISHED",
+        assignments: { none: { assigneeId: "11111111-1111-4111-8111-111111111111" } },
+      }),
+    }));
+  });
 });

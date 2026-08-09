@@ -406,6 +406,7 @@ export const ModelName = {
   AuthSession: 'AuthSession',
   Project: 'Project',
   ProjectMember: 'ProjectMember',
+  SharedWish: 'SharedWish',
   Task: 'Task',
   TaskRequirement: 'TaskRequirement',
   TaskAttachment: 'TaskAttachment',
@@ -432,7 +433,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "calendarEvent" | "entry" | "entryVersion" | "entryComment" | "calendarSubscription" | "authSession" | "project" | "projectMember" | "task" | "taskRequirement" | "taskAttachment" | "taskApplication" | "applicationAttachment" | "taskAssignment" | "taskSubmission" | "submissionAttachment" | "taskComment" | "notification" | "auditLog"
+    modelProps: "user" | "calendarEvent" | "entry" | "entryVersion" | "entryComment" | "calendarSubscription" | "authSession" | "project" | "projectMember" | "sharedWish" | "task" | "taskRequirement" | "taskAttachment" | "taskApplication" | "applicationAttachment" | "taskAssignment" | "taskSubmission" | "submissionAttachment" | "taskComment" | "notification" | "auditLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1099,6 +1100,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ProjectMemberCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ProjectMemberCountAggregateOutputType> | number
+        }
+      }
+    }
+    SharedWish: {
+      payload: Prisma.$SharedWishPayload<ExtArgs>
+      fields: Prisma.SharedWishFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.SharedWishFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.SharedWishFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>
+        }
+        findFirst: {
+          args: Prisma.SharedWishFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.SharedWishFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>
+        }
+        findMany: {
+          args: Prisma.SharedWishFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>[]
+        }
+        create: {
+          args: Prisma.SharedWishCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>
+        }
+        createMany: {
+          args: Prisma.SharedWishCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.SharedWishCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>[]
+        }
+        delete: {
+          args: Prisma.SharedWishDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>
+        }
+        update: {
+          args: Prisma.SharedWishUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>
+        }
+        deleteMany: {
+          args: Prisma.SharedWishDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.SharedWishUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.SharedWishUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>[]
+        }
+        upsert: {
+          args: Prisma.SharedWishUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$SharedWishPayload>
+        }
+        aggregate: {
+          args: Prisma.SharedWishAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateSharedWish>
+        }
+        groupBy: {
+          args: Prisma.SharedWishGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SharedWishGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.SharedWishCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.SharedWishCountAggregateOutputType> | number
         }
       }
     }
@@ -2095,6 +2170,22 @@ export const ProjectMemberScalarFieldEnum = {
 export type ProjectMemberScalarFieldEnum = (typeof ProjectMemberScalarFieldEnum)[keyof typeof ProjectMemberScalarFieldEnum]
 
 
+export const SharedWishScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  title: 'title',
+  position: 'position',
+  sourceKey: 'sourceKey',
+  createdById: 'createdById',
+  completedById: 'completedById',
+  completedAt: 'completedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SharedWishScalarFieldEnum = (typeof SharedWishScalarFieldEnum)[keyof typeof SharedWishScalarFieldEnum]
+
+
 export const TaskScalarFieldEnum = {
   id: 'id',
   projectId: 'projectId',
@@ -2822,6 +2913,7 @@ export type GlobalOmitConfig = {
   authSession?: Prisma.AuthSessionOmit
   project?: Prisma.ProjectOmit
   projectMember?: Prisma.ProjectMemberOmit
+  sharedWish?: Prisma.SharedWishOmit
   task?: Prisma.TaskOmit
   taskRequirement?: Prisma.TaskRequirementOmit
   taskAttachment?: Prisma.TaskAttachmentOmit

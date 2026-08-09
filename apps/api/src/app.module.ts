@@ -16,6 +16,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
 import { EntriesModule } from "./entries/entries.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { ProjectsModule } from "./projects/projects.module";
+import { SharedWishesModule } from "./shared-wishes/shared-wishes.module";
 import { StorageModule } from "./storage/storage.module";
 import { TasksModule } from "./tasks/tasks.module";
 import { UsersModule } from "./users/users.module";
@@ -47,6 +48,7 @@ import { UsersModule } from "./users/users.module";
     CalendarModule,
     AuthModule,
     ProjectsModule,
+    SharedWishesModule,
     TasksModule,
     CollaborationModule,
     StorageModule,

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import { extname, join, resolve } from "node:path";
+import { constants } from "node:fs";
+import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
+import { extname, resolve } from "node:path";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
@@ -45,6 +46,26 @@ export class StorageService {
 
   async remove(storageName: string): Promise<void> {
     await rm(this.resolveSafe(storageName), { force: true });
+  }
+
+  async importJournalAsset(sourcePath: string, storageName: string): Promise<void> {
+    if (!/^[a-f0-9]{64}\.(?:jpe?g|png|webp)$/i.test(storageName)) {
+      throw new BadRequestException("手帐图片名称不正确");
+    }
+    const target = this.resolveSafe(`journal/${storageName}`);
+    await mkdir(resolve(target, ".."), { recursive: true });
+    try {
+      await copyFile(sourcePath, target, constants.COPYFILE_EXCL);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+  }
+
+  journalAssetPath(storageName: string): string {
+    if (!/^[a-f0-9]{64}\.(?:jpe?g|png|webp)$/i.test(storageName)) {
+      throw new BadRequestException("手帐图片名称不正确");
+    }
+    return this.resolveSafe(`journal/${storageName}`);
   }
 
   private resolveSafe(storageName: string): string {

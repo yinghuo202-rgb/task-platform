@@ -102,7 +102,7 @@ export function TaskForm({ taskId, initialProjectId = "" }: { taskId?: string; i
     <input type="hidden" {...form.register("projectId")} />
     <input type="hidden" {...form.register("description")} />
     <div className="task-space-note"><span style={{ background: selectedProject?.color ?? "#91c5b6" }} />{projectsLoading ? "正在打开 la vie…" : selectedProject?.name ?? "la vie"}</div>
-    <Field label="想做的事" required error={form.formState.errors.title?.message}><Input autoFocus placeholder="例如：周六一起去逛花市" {...form.register("title")} /></Field>
+    <Field label="想请对方做的事" required error={form.formState.errors.title?.message}><Input autoFocus placeholder="例如：帮我选一张照片做头像" {...form.register("title")} /></Field>
     <div className="form-grid">
       <Field label="分类" required error={form.formState.errors.category?.message}><select className="input" {...form.register("category")}>{!projectCategories.includes(currentCategory as never) && <option>{currentCategory}</option>}{projectCategories.map((category) => <option key={category}>{category}</option>)}</select></Field>
       <Field label="什么时候" required error={form.formState.errors.timeMode?.message}>
@@ -120,9 +120,10 @@ export function TaskForm({ taskId, initialProjectId = "" }: { taskId?: string; i
       </div>
       : <Field label={timeMode === "AT" ? "具体执行时间" : "截止时间"} required error={form.formState.errors.deadline?.message}><Input type="datetime-local" {...form.register("deadline")} /></Field>}
     <Field label="备注" required error={form.formState.errors.summary?.message}><Textarea style={{ minHeight: 110 }} placeholder="写下要准备的东西，或想告诉对方的话" {...form.register("summary")} /></Field>
+    <Field label="完成奖励（可选）" error={form.formState.errors.rewardDescription?.message}><Input placeholder="例如：一个拥抱、请喝奶茶、周末负责做饭" maxLength={500} {...form.register("rewardDescription")} /></Field>
     {form.formState.errors.root?.message && <div className="form-message" role="alert">{form.formState.errors.root.message}</div>}
     {!projectsLoading && !projects.length && <div className="notice">你还没有加入 la vie，请联系空间管理员。</div>}
-    <Button type="button" disabled={form.formState.isSubmitting || !projects.length} onClick={() => void submit()}>{form.formState.isSubmitting ? "保存中…" : taskId ? "保存修改" : "加入清单"}</Button>
+    <Button type="button" disabled={form.formState.isSubmitting || !projects.length} onClick={() => void submit()}>{form.formState.isSubmitting ? "保存中…" : taskId ? "保存修改" : "发布给对方"}</Button>
   </form>;
 }
 

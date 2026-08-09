@@ -109,8 +109,10 @@ export type TaskSummary = {
   deadline: string | null;
   personalDueAt: string | null;
   personalAssignedAt: string | null;
+  personalCompletedAt: string | null;
   personalAssignmentStatus: "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED" | "COMPLETED" | "CANCELLED" | null;
   publishedAt: string | null;
+  completedAt: string | null;
   publisher: PublicUser;
   applicationCount: number;
   assignmentCount: number;
