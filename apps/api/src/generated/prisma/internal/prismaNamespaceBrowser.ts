@@ -60,6 +60,7 @@ export const ModelName = {
   AuthSession: 'AuthSession',
   Project: 'Project',
   ProjectMember: 'ProjectMember',
+  SharedWish: 'SharedWish',
   Task: 'Task',
   TaskRequirement: 'TaskRequirement',
   TaskAttachment: 'TaskAttachment',
@@ -227,6 +228,22 @@ export const ProjectMemberScalarFieldEnum = {
 } as const
 
 export type ProjectMemberScalarFieldEnum = (typeof ProjectMemberScalarFieldEnum)[keyof typeof ProjectMemberScalarFieldEnum]
+
+
+export const SharedWishScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  title: 'title',
+  position: 'position',
+  sourceKey: 'sourceKey',
+  createdById: 'createdById',
+  completedById: 'completedById',
+  completedAt: 'completedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SharedWishScalarFieldEnum = (typeof SharedWishScalarFieldEnum)[keyof typeof SharedWishScalarFieldEnum]
 
 
 export const TaskScalarFieldEnum = {

@@ -138,5 +138,5 @@ export class ListTasksDto {
   order: "asc" | "desc" = "desc";
 
   @IsOptional() @IsString()
-  scope?: "published" | "assigned" | "completed" | "applications";
+  scope?: "published" | "assigned" | "completed" | "applications" | "available";
 }

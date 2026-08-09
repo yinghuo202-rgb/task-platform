@@ -1,101 +1,176 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ChevronRight, Circle, Clock3, ListChecks } from "lucide-react";
-import type { TaskSummary } from "@task-platform/shared-types";
+import { CalendarCheck, Check, Circle, Gift, HeartHandshake, History, Inbox, Plus, Send } from "lucide-react";
+import type { PublicUser, TaskSummary } from "@task-platform/shared-types";
 import { apiFetch, ApiError } from "@/lib/api";
 import { personalTaskTimeLabel, taskTimeIsOverdue } from "@/lib/task-time";
 
-type TodoView = "open" | "completed";
-type TodoItem = { task: TaskSummary; source: "assigned" | "published" };
+type SharedWish = {
+  id: string;
+  title: string;
+  completedAt: string | null;
+  completedBy: PublicUser | null;
+};
+
+type BoardTask = { task: TaskSummary; available?: boolean };
 
 export function PersonalTodoList() {
-  const [items, setItems] = useState<TodoItem[]>([]);
-  const [view, setView] = useState<TodoView>("open");
+  const [wishes, setWishes] = useState<SharedWish[]>([]);
+  const [assigned, setAssigned] = useState<BoardTask[]>([]);
+  const [published, setPublished] = useState<BoardTask[]>([]);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [newWish, setNewWish] = useState("");
+  const [busy, setBusy] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    void Promise.all([
-      apiFetch<TaskSummary[]>("/tasks?scope=assigned&pageSize=100"),
-      apiFetch<TaskSummary[]>("/tasks?scope=published&pageSize=100"),
-    ]).then(([assigned, published]) => {
-      const merged = new Map<string, TodoItem>();
-      assigned.data.forEach((task) => merged.set(task.id, { task, source: "assigned" }));
-      published.data.forEach((task) => {
-        if (!merged.has(task.id)) merged.set(task.id, { task, source: "published" });
-      });
-      setItems([...merged.values()]);
-    }).catch((err: unknown) => {
-      setError(err instanceof ApiError ? err.message : "个人待办加载失败");
-    }).finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    setError("");
+    try {
+      const [wishResult, assignedResult, publishedResult, availableResult] = await Promise.all([
+        apiFetch<SharedWish[]>("/shared-wishes"),
+        apiFetch<TaskSummary[]>("/tasks?scope=assigned&pageSize=100"),
+        apiFetch<TaskSummary[]>("/tasks?scope=published&pageSize=100"),
+        apiFetch<TaskSummary[]>("/tasks?scope=available&pageSize=100"),
+      ]);
+      setWishes(wishResult.data);
+      setAssigned([
+        ...availableResult.data.map((task) => ({ task, available: true })),
+        ...assignedResult.data.map((task) => ({ task })),
+      ]);
+      setPublished(publishedResult.data.map((task) => ({ task })));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "清单加载失败");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const counts = useMemo(() => ({
-    open: items.filter(({ task }) => task.status !== "COMPLETED").length,
-    completed: items.filter(({ task }) => task.status === "COMPLETED").length,
-  }), [items]);
+  useEffect(() => { void load(); }, [load]);
 
-  const visible = useMemo(() => items
-    .filter(({ task }) => view === "completed" ? task.status === "COMPLETED" : task.status !== "COMPLETED")
-    .sort(compareTodos), [items, view]);
+  const completedCount = useMemo(() =>
+    wishes.filter((wish) => wish.completedAt).length
+    + assigned.filter(({ task }) => task.status === "COMPLETED").length
+    + published.filter(({ task }) => task.status === "COMPLETED").length,
+  [assigned, published, wishes]);
 
-  return <section className="todo-panel">
-    <div className="todo-panel-header">
-      <div>
-        <span className="eyebrow">个人清单</span>
-        <h2><ListChecks size={22} /> 我的待办</h2>
-      </div>
-      <div className="todo-tabs" role="tablist" aria-label="待办状态">
-        <button className={view === "open" ? "active" : ""} role="tab" aria-selected={view === "open"} onClick={() => setView("open")}>待处理 <span>{counts.open}</span></button>
-        <button className={view === "completed" ? "active" : ""} role="tab" aria-selected={view === "completed"} onClick={() => setView("completed")}>已完成 <span>{counts.completed}</span></button>
-      </div>
+  const createWish = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newWish.trim()) return;
+    setBusy("new-wish"); setError("");
+    try {
+      const result = await apiFetch<SharedWish>("/shared-wishes", { method: "POST", body: JSON.stringify({ title: newWish.trim() }) });
+      setWishes((current) => [...current, result.data]);
+      setNewWish("");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "添加失败");
+    } finally { setBusy(""); }
+  };
+
+  const toggleWish = async (wish: SharedWish) => {
+    setBusy(wish.id); setError("");
+    try {
+      const result = await apiFetch<SharedWish>(`/shared-wishes/${wish.id}/completed`, {
+        method: "PATCH",
+        body: JSON.stringify({ completed: !wish.completedAt }),
+      });
+      setWishes((current) => current.map((item) => item.id === wish.id ? result.data : item));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "状态更新失败");
+    } finally { setBusy(""); }
+  };
+
+  const claim = async (taskId: string) => {
+    setBusy(taskId); setError("");
+    try {
+      await apiFetch(`/tasks/${taskId}/claim`, { method: "POST" });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "接取失败");
+    } finally { setBusy(""); }
+  };
+
+  const visibleWishes = wishes.filter((wish) => showCompleted || !wish.completedAt);
+  const visibleAssigned = assigned.filter(({ task }) => showCompleted || task.status !== "COMPLETED").sort(compareTasks);
+  const visiblePublished = published.filter(({ task }) => showCompleted || task.status !== "COMPLETED").sort(compareTasks);
+
+  return <section className="list-board">
+    <div className="list-board-toolbar">
+      <p>共同愿望不需要接取；个人任务由一方发布，另一方接取并完成。</p>
+      <button type="button" className={showCompleted ? "active" : ""} onClick={() => setShowCompleted((value) => !value)}><History size={15} />{showCompleted ? "隐藏已完成" : `显示已完成 · ${completedCount}`}</button>
     </div>
-    {loading ? <div className="todo-loading">正在整理你的待办…</div>
-      : error ? <div className="form-message" role="alert">{error}</div>
-      : visible.length ? <div className="todo-list">{visible.map((item) => <TodoRow item={item} key={item.task.id} />)}</div>
-      : <div className="todo-empty"><CheckCircle2 size={26} /><strong>{view === "open" ? "当前没有待处理事项" : "还没有已完成事项"}</strong><span>{view === "open" ? "新的项目任务会出现在这里。" : "完成的任务会保留在这里方便回顾。"}</span></div>}
+    {error && <div className="form-message" role="alert">{error}</div>}
+    {loading ? <div className="loading">正在整理我们的清单…</div> : <div className="list-board-columns">
+      <section className="list-column together-column">
+        <ColumnHeader icon={<HeartHandshake />} eyebrow="TOGETHER" title="一起做的事" count={visibleWishes.length} />
+        <form className="wish-quick-add" onSubmit={createWish}><input aria-label="新的一起做事项" value={newWish} maxLength={500} onChange={(event) => setNewWish(event.target.value)} placeholder="再加一件想一起做的事" /><button type="submit" aria-label="添加" disabled={!newWish.trim() || busy === "new-wish"}><Plus size={16} /></button></form>
+        <div className="list-column-scroll">{visibleWishes.length ? visibleWishes.map((wish) => <button type="button" className={`wish-row${wish.completedAt ? " completed" : ""}`} key={wish.id} disabled={busy === wish.id} onClick={() => void toggleWish(wish)}><span className="wish-check">{wish.completedAt ? <Check /> : <Circle />}</span><span><strong>{wish.title}</strong>{wish.completedAt && <small>{completionLabel(wish.completedAt, wish.completedBy?.displayName)}</small>}</span></button>) : <ColumnEmpty text={showCompleted ? "还没有共同愿望" : "愿望都完成啦"} />}</div>
+      </section>
+
+      <section className="list-column assigned-column">
+        <ColumnHeader icon={<Inbox />} eyebrow="FOR ME" title="我接取的" count={visibleAssigned.length} />
+        <div className="list-column-scroll task-mini-list">{visibleAssigned.length ? visibleAssigned.map(({ task, available }) => <TaskMiniCard key={task.id} task={task} mode={available ? "available" : "assigned"} busy={busy === task.id} onClaim={() => void claim(task.id)} />) : <ColumnEmpty text="暂时没有要接取的任务" />}</div>
+      </section>
+
+      <section className="list-column published-column">
+        <ColumnHeader icon={<Send />} eyebrow="FROM ME" title="我发布的" count={visiblePublished.length} action={<Link href="/tasks/new"><Plus size={14} />发布</Link>} />
+        <div className="list-column-scroll task-mini-list">{visiblePublished.length ? visiblePublished.map(({ task }) => <TaskMiniCard key={task.id} task={task} mode="published" />) : <ColumnEmpty text="还没有发布给对方的任务" />}</div>
+      </section>
+    </div>}
   </section>;
 }
 
-function TodoRow({ item: { task, source } }: { item: TodoItem }) {
-  const completed = task.status === "COMPLETED";
-  const timeLabel = personalTaskTimeLabel(task, completed);
-  const overdue = taskTimeIsOverdue(task, completed);
-  return <Link className={`todo-row${completed ? " completed" : ""}`} href={`/tasks/${task.id}`}>
-    <span className="todo-check" aria-hidden="true">{completed ? <CheckCircle2 /> : <Circle />}</span>
-    <span className="todo-main">
-      <strong>{task.title}</strong>
-      <span className="todo-context">
-        <span className="project-pill"><i style={{ background: task.project.color }} />{task.project.name}</span>
-        <span>{source === "published" ? "我创建的" : "分配给我"}</span>
-      </span>
-    </span>
-    <span className={`todo-deadline${overdue ? " overdue" : ""}`}><Clock3 size={15} />{timeLabel}</span>
-    <span className="todo-next">{nextAction(task, source)}<ChevronRight size={16} /></span>
-  </Link>;
+function ColumnHeader({ icon, eyebrow, title, count, action }: { icon: React.ReactNode; eyebrow: string; title: string; count: number; action?: React.ReactNode }) {
+  return <header className="list-column-header"><span>{icon}</span><div><small>{eyebrow}</small><h2>{title}<b>{count}</b></h2></div>{action}</header>;
 }
 
-function compareTodos(left: TodoItem, right: TodoItem) {
+function TaskMiniCard({ task, mode, busy = false, onClaim }: { task: TaskSummary; mode: "available" | "assigned" | "published"; busy?: boolean; onClaim?: () => void }) {
+  const completed = task.status === "COMPLETED";
+  const completionTime = mode === "assigned" ? task.personalCompletedAt : task.completedAt;
+  const overdue = mode === "assigned" && taskTimeIsOverdue(task, completed);
+  const reward = rewardLabel(task);
+  return <article className={`task-mini-card${completed ? " completed" : ""}`}>
+    <div className="task-mini-top"><span className={`task-mini-dot ${mode}`} /> <small>{mode === "available" ? `${task.publisher.displayName} 发布` : statusLabel(task, mode)}</small>{completed && completionTime && <time>{formatDate(completionTime)}</time>}</div>
+    <Link href={`/tasks/${task.id}`}><strong>{task.title}</strong><p>{task.summary}</p></Link>
+    <div className="task-mini-foot">{reward && <span><Gift size={13} />{reward}</span>}{mode === "assigned" && !completed && <span className={overdue ? "overdue" : ""}><CalendarCheck size={13} />{personalTaskTimeLabel(task, false)}</span>}{mode === "available" && task.claimMode === "AUTO" && <button type="button" disabled={busy} onClick={onClaim}>{busy ? "接取中…" : "我来接"}</button>}{mode === "available" && task.claimMode !== "AUTO" && <Link href={`/tasks/${task.id}`}>查看申请</Link>}</div>
+  </article>;
+}
+
+function ColumnEmpty({ text }: { text: string }) {
+  return <div className="list-column-empty"><Check size={20} /><span>{text}</span></div>;
+}
+
+function compareTasks(left: BoardTask, right: BoardTask) {
+  if (Boolean(left.available) !== Boolean(right.available)) return left.available ? -1 : 1;
   if (left.task.status === "COMPLETED" && right.task.status !== "COMPLETED") return 1;
   if (right.task.status === "COMPLETED" && left.task.status !== "COMPLETED") return -1;
-  const leftValue = left.task.personalDueAt ?? left.task.deadline;
-  const rightValue = right.task.personalDueAt ?? right.task.deadline;
-  const leftTime = leftValue ? new Date(leftValue).getTime() : Number.POSITIVE_INFINITY;
-  const rightTime = rightValue ? new Date(rightValue).getTime() : Number.POSITIVE_INFINITY;
-  return leftTime - rightTime || left.task.title.localeCompare(right.task.title, "zh-CN");
+  const leftDate = left.task.personalDueAt ?? left.task.deadline ?? left.task.publishedAt;
+  const rightDate = right.task.personalDueAt ?? right.task.deadline ?? right.task.publishedAt;
+  return (leftDate ? new Date(leftDate).getTime() : Number.MAX_SAFE_INTEGER) - (rightDate ? new Date(rightDate).getTime() : Number.MAX_SAFE_INTEGER);
 }
 
-function nextAction(task: TaskSummary, source: TodoItem["source"]) {
-  if (task.status === "COMPLETED") return "查看记录";
-  if (source === "published") {
-    if (task.status === "SUBMITTED") return "去验收";
-    if (task.status === "PUBLISHED") return "等待推进";
-    return "查看进度";
-  }
-  if (task.status === "CLAIMED") return "开始处理";
-  if (task.status === "REVISION_REQUESTED") return "按反馈修改";
-  if (task.status === "SUBMITTED") return "等待验收";
-  return "继续处理";
+function rewardLabel(task: TaskSummary) {
+  if (task.rewardDescription) return task.rewardDescription;
+  if (task.rewardAmount) return `${task.rewardAmount} ${task.rewardType === "POINTS" ? "积分" : ""}`.trim();
+  return "";
+}
+
+function statusLabel(task: TaskSummary, mode: "assigned" | "published") {
+  if (task.status === "COMPLETED") return "已完成";
+  if (mode === "published" && task.status === "PUBLISHED") return "等待对方接取";
+  if (task.status === "SUBMITTED") return mode === "published" ? "等待你确认" : "等待对方确认";
+  if (task.status === "REVISION_REQUESTED") return "需要再处理";
+  if (task.status === "IN_PROGRESS") return "进行中";
+  if (task.status === "CLAIMED") return "已接取";
+  return "已发布";
+}
+
+function completionLabel(value: string, person?: string) {
+  return `${person ? `${person} · ` : ""}${formatDate(value)}完成`;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "numeric", day: "numeric" }).format(new Date(value));
 }

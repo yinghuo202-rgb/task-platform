@@ -255,6 +255,8 @@ export type UserWhereInput = {
   updatedEntries?: Prisma.EntryListRelationFilter
   entryVersions?: Prisma.EntryVersionListRelationFilter
   entryComments?: Prisma.EntryCommentListRelationFilter
+  createdSharedWishes?: Prisma.SharedWishListRelationFilter
+  completedSharedWishes?: Prisma.SharedWishListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -287,6 +289,8 @@ export type UserOrderByWithRelationInput = {
   updatedEntries?: Prisma.EntryOrderByRelationAggregateInput
   entryVersions?: Prisma.EntryVersionOrderByRelationAggregateInput
   entryComments?: Prisma.EntryCommentOrderByRelationAggregateInput
+  createdSharedWishes?: Prisma.SharedWishOrderByRelationAggregateInput
+  completedSharedWishes?: Prisma.SharedWishOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -322,6 +326,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   updatedEntries?: Prisma.EntryListRelationFilter
   entryVersions?: Prisma.EntryVersionListRelationFilter
   entryComments?: Prisma.EntryCommentListRelationFilter
+  createdSharedWishes?: Prisma.SharedWishListRelationFilter
+  completedSharedWishes?: Prisma.SharedWishListRelationFilter
 }, "id" | "username" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -390,6 +396,8 @@ export type UserCreateInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -422,6 +430,8 @@ export type UserUncheckedCreateInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUpdateInput = {
@@ -454,6 +464,8 @@ export type UserUpdateInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -486,6 +498,8 @@ export type UserUncheckedUpdateInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -752,6 +766,36 @@ export type UserUpdateOneRequiredWithoutProjectMembershipsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutProjectMembershipsInput, Prisma.UserUpdateWithoutProjectMembershipsInput>, Prisma.UserUncheckedUpdateWithoutProjectMembershipsInput>
 }
 
+export type UserCreateNestedOneWithoutCreatedSharedWishesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCreatedSharedWishesInput, Prisma.UserUncheckedCreateWithoutCreatedSharedWishesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCreatedSharedWishesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutCompletedSharedWishesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCompletedSharedWishesInput, Prisma.UserUncheckedCreateWithoutCompletedSharedWishesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCompletedSharedWishesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutCreatedSharedWishesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCreatedSharedWishesInput, Prisma.UserUncheckedCreateWithoutCreatedSharedWishesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCreatedSharedWishesInput
+  upsert?: Prisma.UserUpsertWithoutCreatedSharedWishesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCreatedSharedWishesInput, Prisma.UserUpdateWithoutCreatedSharedWishesInput>, Prisma.UserUncheckedUpdateWithoutCreatedSharedWishesInput>
+}
+
+export type UserUpdateOneWithoutCompletedSharedWishesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutCompletedSharedWishesInput, Prisma.UserUncheckedCreateWithoutCompletedSharedWishesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutCompletedSharedWishesInput
+  upsert?: Prisma.UserUpsertWithoutCompletedSharedWishesInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutCompletedSharedWishesInput, Prisma.UserUpdateWithoutCompletedSharedWishesInput>, Prisma.UserUncheckedUpdateWithoutCompletedSharedWishesInput>
+}
+
 export type UserCreateNestedOneWithoutTasksInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutTasksInput, Prisma.UserUncheckedCreateWithoutTasksInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutTasksInput
@@ -881,6 +925,8 @@ export type UserCreateWithoutCalendarEventsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutCalendarEventsInput = {
@@ -912,6 +958,8 @@ export type UserUncheckedCreateWithoutCalendarEventsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutCalendarEventsInput = {
@@ -959,6 +1007,8 @@ export type UserUpdateWithoutCalendarEventsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCalendarEventsInput = {
@@ -990,6 +1040,8 @@ export type UserUncheckedUpdateWithoutCalendarEventsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutCreatedEntriesInput = {
@@ -1021,6 +1073,8 @@ export type UserCreateWithoutCreatedEntriesInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutCreatedEntriesInput = {
@@ -1052,6 +1106,8 @@ export type UserUncheckedCreateWithoutCreatedEntriesInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutCreatedEntriesInput = {
@@ -1088,6 +1144,8 @@ export type UserCreateWithoutUpdatedEntriesInput = {
   createdEntries?: Prisma.EntryCreateNestedManyWithoutCreatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutUpdatedEntriesInput = {
@@ -1119,6 +1177,8 @@ export type UserUncheckedCreateWithoutUpdatedEntriesInput = {
   createdEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutCreatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutUpdatedEntriesInput = {
@@ -1166,6 +1226,8 @@ export type UserUpdateWithoutCreatedEntriesInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedEntriesInput = {
@@ -1197,6 +1259,8 @@ export type UserUncheckedUpdateWithoutCreatedEntriesInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUpsertWithoutUpdatedEntriesInput = {
@@ -1239,6 +1303,8 @@ export type UserUpdateWithoutUpdatedEntriesInput = {
   createdEntries?: Prisma.EntryUpdateManyWithoutCreatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutUpdatedEntriesInput = {
@@ -1270,6 +1336,8 @@ export type UserUncheckedUpdateWithoutUpdatedEntriesInput = {
   createdEntries?: Prisma.EntryUncheckedUpdateManyWithoutCreatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutEntryVersionsInput = {
@@ -1301,6 +1369,8 @@ export type UserCreateWithoutEntryVersionsInput = {
   createdEntries?: Prisma.EntryCreateNestedManyWithoutCreatedByInput
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutEntryVersionsInput = {
@@ -1332,6 +1402,8 @@ export type UserUncheckedCreateWithoutEntryVersionsInput = {
   createdEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutCreatedByInput
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutEntryVersionsInput = {
@@ -1379,6 +1451,8 @@ export type UserUpdateWithoutEntryVersionsInput = {
   createdEntries?: Prisma.EntryUpdateManyWithoutCreatedByNestedInput
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEntryVersionsInput = {
@@ -1410,6 +1484,8 @@ export type UserUncheckedUpdateWithoutEntryVersionsInput = {
   createdEntries?: Prisma.EntryUncheckedUpdateManyWithoutCreatedByNestedInput
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutEntryCommentsInput = {
@@ -1441,6 +1517,8 @@ export type UserCreateWithoutEntryCommentsInput = {
   createdEntries?: Prisma.EntryCreateNestedManyWithoutCreatedByInput
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutEntryCommentsInput = {
@@ -1472,6 +1550,8 @@ export type UserUncheckedCreateWithoutEntryCommentsInput = {
   createdEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutCreatedByInput
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutEntryCommentsInput = {
@@ -1519,6 +1599,8 @@ export type UserUpdateWithoutEntryCommentsInput = {
   createdEntries?: Prisma.EntryUpdateManyWithoutCreatedByNestedInput
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEntryCommentsInput = {
@@ -1550,6 +1632,8 @@ export type UserUncheckedUpdateWithoutEntryCommentsInput = {
   createdEntries?: Prisma.EntryUncheckedUpdateManyWithoutCreatedByNestedInput
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutOutgoingCalendarSubscriptionsInput = {
@@ -1581,6 +1665,8 @@ export type UserCreateWithoutOutgoingCalendarSubscriptionsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutOutgoingCalendarSubscriptionsInput = {
@@ -1612,6 +1698,8 @@ export type UserUncheckedCreateWithoutOutgoingCalendarSubscriptionsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutOutgoingCalendarSubscriptionsInput = {
@@ -1648,6 +1736,8 @@ export type UserCreateWithoutIncomingCalendarSubscriptionsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutIncomingCalendarSubscriptionsInput = {
@@ -1679,6 +1769,8 @@ export type UserUncheckedCreateWithoutIncomingCalendarSubscriptionsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutIncomingCalendarSubscriptionsInput = {
@@ -1726,6 +1818,8 @@ export type UserUpdateWithoutOutgoingCalendarSubscriptionsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutOutgoingCalendarSubscriptionsInput = {
@@ -1757,6 +1851,8 @@ export type UserUncheckedUpdateWithoutOutgoingCalendarSubscriptionsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUpsertWithoutIncomingCalendarSubscriptionsInput = {
@@ -1799,6 +1895,8 @@ export type UserUpdateWithoutIncomingCalendarSubscriptionsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutIncomingCalendarSubscriptionsInput = {
@@ -1830,6 +1928,8 @@ export type UserUncheckedUpdateWithoutIncomingCalendarSubscriptionsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutSessionsInput = {
@@ -1861,6 +1961,8 @@ export type UserCreateWithoutSessionsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -1892,6 +1994,8 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -1939,6 +2043,8 @@ export type UserUpdateWithoutSessionsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -1970,6 +2076,8 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutCreatedProjectsInput = {
@@ -2001,6 +2109,8 @@ export type UserCreateWithoutCreatedProjectsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutCreatedProjectsInput = {
@@ -2032,6 +2142,8 @@ export type UserUncheckedCreateWithoutCreatedProjectsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutCreatedProjectsInput = {
@@ -2079,6 +2191,8 @@ export type UserUpdateWithoutCreatedProjectsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCreatedProjectsInput = {
@@ -2110,6 +2224,8 @@ export type UserUncheckedUpdateWithoutCreatedProjectsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutProjectMembershipsInput = {
@@ -2141,6 +2257,8 @@ export type UserCreateWithoutProjectMembershipsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutProjectMembershipsInput = {
@@ -2172,6 +2290,8 @@ export type UserUncheckedCreateWithoutProjectMembershipsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutProjectMembershipsInput = {
@@ -2219,6 +2339,8 @@ export type UserUpdateWithoutProjectMembershipsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutProjectMembershipsInput = {
@@ -2250,6 +2372,304 @@ export type UserUncheckedUpdateWithoutProjectMembershipsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
+}
+
+export type UserCreateWithoutCreatedSharedWishesInput = {
+  id?: string
+  username: string
+  email: string
+  passwordHash: string
+  displayName: string
+  avatarPath?: string | null
+  bio?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastLoginAt?: Date | string | null
+  sessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatorInput
+  projectMemberships?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutPublisherInput
+  applications?: Prisma.TaskApplicationCreateNestedManyWithoutApplicantInput
+  assignments?: Prisma.TaskAssignmentCreateNestedManyWithoutAssigneeInput
+  submissions?: Prisma.TaskSubmissionCreateNestedManyWithoutSubmitterInput
+  comments?: Prisma.TaskCommentCreateNestedManyWithoutAuthorInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  calendarEvents?: Prisma.CalendarEventCreateNestedManyWithoutUserInput
+  outgoingCalendarSubscriptions?: Prisma.CalendarSubscriptionCreateNestedManyWithoutSubscriberInput
+  incomingCalendarSubscriptions?: Prisma.CalendarSubscriptionCreateNestedManyWithoutOwnerInput
+  createdEntries?: Prisma.EntryCreateNestedManyWithoutCreatedByInput
+  updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
+  entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
+  entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
+}
+
+export type UserUncheckedCreateWithoutCreatedSharedWishesInput = {
+  id?: string
+  username: string
+  email: string
+  passwordHash: string
+  displayName: string
+  avatarPath?: string | null
+  bio?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastLoginAt?: Date | string | null
+  sessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatorInput
+  projectMemberships?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutPublisherInput
+  applications?: Prisma.TaskApplicationUncheckedCreateNestedManyWithoutApplicantInput
+  assignments?: Prisma.TaskAssignmentUncheckedCreateNestedManyWithoutAssigneeInput
+  submissions?: Prisma.TaskSubmissionUncheckedCreateNestedManyWithoutSubmitterInput
+  comments?: Prisma.TaskCommentUncheckedCreateNestedManyWithoutAuthorInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  calendarEvents?: Prisma.CalendarEventUncheckedCreateNestedManyWithoutUserInput
+  outgoingCalendarSubscriptions?: Prisma.CalendarSubscriptionUncheckedCreateNestedManyWithoutSubscriberInput
+  incomingCalendarSubscriptions?: Prisma.CalendarSubscriptionUncheckedCreateNestedManyWithoutOwnerInput
+  createdEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutCreatedByInput
+  updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
+  entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
+  entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
+}
+
+export type UserCreateOrConnectWithoutCreatedSharedWishesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutCreatedSharedWishesInput, Prisma.UserUncheckedCreateWithoutCreatedSharedWishesInput>
+}
+
+export type UserCreateWithoutCompletedSharedWishesInput = {
+  id?: string
+  username: string
+  email: string
+  passwordHash: string
+  displayName: string
+  avatarPath?: string | null
+  bio?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastLoginAt?: Date | string | null
+  sessions?: Prisma.AuthSessionCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectCreateNestedManyWithoutCreatorInput
+  projectMemberships?: Prisma.ProjectMemberCreateNestedManyWithoutUserInput
+  tasks?: Prisma.TaskCreateNestedManyWithoutPublisherInput
+  applications?: Prisma.TaskApplicationCreateNestedManyWithoutApplicantInput
+  assignments?: Prisma.TaskAssignmentCreateNestedManyWithoutAssigneeInput
+  submissions?: Prisma.TaskSubmissionCreateNestedManyWithoutSubmitterInput
+  comments?: Prisma.TaskCommentCreateNestedManyWithoutAuthorInput
+  notifications?: Prisma.NotificationCreateNestedManyWithoutUserInput
+  auditLogs?: Prisma.AuditLogCreateNestedManyWithoutActorInput
+  calendarEvents?: Prisma.CalendarEventCreateNestedManyWithoutUserInput
+  outgoingCalendarSubscriptions?: Prisma.CalendarSubscriptionCreateNestedManyWithoutSubscriberInput
+  incomingCalendarSubscriptions?: Prisma.CalendarSubscriptionCreateNestedManyWithoutOwnerInput
+  createdEntries?: Prisma.EntryCreateNestedManyWithoutCreatedByInput
+  updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
+  entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
+  entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserUncheckedCreateWithoutCompletedSharedWishesInput = {
+  id?: string
+  username: string
+  email: string
+  passwordHash: string
+  displayName: string
+  avatarPath?: string | null
+  bio?: string | null
+  role?: $Enums.UserRole
+  status?: $Enums.UserStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  lastLoginAt?: Date | string | null
+  sessions?: Prisma.AuthSessionUncheckedCreateNestedManyWithoutUserInput
+  createdProjects?: Prisma.ProjectUncheckedCreateNestedManyWithoutCreatorInput
+  projectMemberships?: Prisma.ProjectMemberUncheckedCreateNestedManyWithoutUserInput
+  tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutPublisherInput
+  applications?: Prisma.TaskApplicationUncheckedCreateNestedManyWithoutApplicantInput
+  assignments?: Prisma.TaskAssignmentUncheckedCreateNestedManyWithoutAssigneeInput
+  submissions?: Prisma.TaskSubmissionUncheckedCreateNestedManyWithoutSubmitterInput
+  comments?: Prisma.TaskCommentUncheckedCreateNestedManyWithoutAuthorInput
+  notifications?: Prisma.NotificationUncheckedCreateNestedManyWithoutUserInput
+  auditLogs?: Prisma.AuditLogUncheckedCreateNestedManyWithoutActorInput
+  calendarEvents?: Prisma.CalendarEventUncheckedCreateNestedManyWithoutUserInput
+  outgoingCalendarSubscriptions?: Prisma.CalendarSubscriptionUncheckedCreateNestedManyWithoutSubscriberInput
+  incomingCalendarSubscriptions?: Prisma.CalendarSubscriptionUncheckedCreateNestedManyWithoutOwnerInput
+  createdEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutCreatedByInput
+  updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
+  entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
+  entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+}
+
+export type UserCreateOrConnectWithoutCompletedSharedWishesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutCompletedSharedWishesInput, Prisma.UserUncheckedCreateWithoutCompletedSharedWishesInput>
+}
+
+export type UserUpsertWithoutCreatedSharedWishesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutCreatedSharedWishesInput, Prisma.UserUncheckedUpdateWithoutCreatedSharedWishesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutCreatedSharedWishesInput, Prisma.UserUncheckedCreateWithoutCreatedSharedWishesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutCreatedSharedWishesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutCreatedSharedWishesInput, Prisma.UserUncheckedUpdateWithoutCreatedSharedWishesInput>
+}
+
+export type UserUpdateWithoutCreatedSharedWishesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  displayName?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatorNestedInput
+  projectMemberships?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutPublisherNestedInput
+  applications?: Prisma.TaskApplicationUpdateManyWithoutApplicantNestedInput
+  assignments?: Prisma.TaskAssignmentUpdateManyWithoutAssigneeNestedInput
+  submissions?: Prisma.TaskSubmissionUpdateManyWithoutSubmitterNestedInput
+  comments?: Prisma.TaskCommentUpdateManyWithoutAuthorNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  calendarEvents?: Prisma.CalendarEventUpdateManyWithoutUserNestedInput
+  outgoingCalendarSubscriptions?: Prisma.CalendarSubscriptionUpdateManyWithoutSubscriberNestedInput
+  incomingCalendarSubscriptions?: Prisma.CalendarSubscriptionUpdateManyWithoutOwnerNestedInput
+  createdEntries?: Prisma.EntryUpdateManyWithoutCreatedByNestedInput
+  updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
+  entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
+  entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutCreatedSharedWishesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  displayName?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatorNestedInput
+  projectMemberships?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutPublisherNestedInput
+  applications?: Prisma.TaskApplicationUncheckedUpdateManyWithoutApplicantNestedInput
+  assignments?: Prisma.TaskAssignmentUncheckedUpdateManyWithoutAssigneeNestedInput
+  submissions?: Prisma.TaskSubmissionUncheckedUpdateManyWithoutSubmitterNestedInput
+  comments?: Prisma.TaskCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  calendarEvents?: Prisma.CalendarEventUncheckedUpdateManyWithoutUserNestedInput
+  outgoingCalendarSubscriptions?: Prisma.CalendarSubscriptionUncheckedUpdateManyWithoutSubscriberNestedInput
+  incomingCalendarSubscriptions?: Prisma.CalendarSubscriptionUncheckedUpdateManyWithoutOwnerNestedInput
+  createdEntries?: Prisma.EntryUncheckedUpdateManyWithoutCreatedByNestedInput
+  updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
+  entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
+  entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
+}
+
+export type UserUpsertWithoutCompletedSharedWishesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutCompletedSharedWishesInput, Prisma.UserUncheckedUpdateWithoutCompletedSharedWishesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutCompletedSharedWishesInput, Prisma.UserUncheckedCreateWithoutCompletedSharedWishesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutCompletedSharedWishesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutCompletedSharedWishesInput, Prisma.UserUncheckedUpdateWithoutCompletedSharedWishesInput>
+}
+
+export type UserUpdateWithoutCompletedSharedWishesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  displayName?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.AuthSessionUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUpdateManyWithoutCreatorNestedInput
+  projectMemberships?: Prisma.ProjectMemberUpdateManyWithoutUserNestedInput
+  tasks?: Prisma.TaskUpdateManyWithoutPublisherNestedInput
+  applications?: Prisma.TaskApplicationUpdateManyWithoutApplicantNestedInput
+  assignments?: Prisma.TaskAssignmentUpdateManyWithoutAssigneeNestedInput
+  submissions?: Prisma.TaskSubmissionUpdateManyWithoutSubmitterNestedInput
+  comments?: Prisma.TaskCommentUpdateManyWithoutAuthorNestedInput
+  notifications?: Prisma.NotificationUpdateManyWithoutUserNestedInput
+  auditLogs?: Prisma.AuditLogUpdateManyWithoutActorNestedInput
+  calendarEvents?: Prisma.CalendarEventUpdateManyWithoutUserNestedInput
+  outgoingCalendarSubscriptions?: Prisma.CalendarSubscriptionUpdateManyWithoutSubscriberNestedInput
+  incomingCalendarSubscriptions?: Prisma.CalendarSubscriptionUpdateManyWithoutOwnerNestedInput
+  createdEntries?: Prisma.EntryUpdateManyWithoutCreatedByNestedInput
+  updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
+  entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
+  entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutCompletedSharedWishesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  displayName?: Prisma.StringFieldUpdateOperationsInput | string
+  avatarPath?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  bio?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  status?: Prisma.EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  lastLoginAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.AuthSessionUncheckedUpdateManyWithoutUserNestedInput
+  createdProjects?: Prisma.ProjectUncheckedUpdateManyWithoutCreatorNestedInput
+  projectMemberships?: Prisma.ProjectMemberUncheckedUpdateManyWithoutUserNestedInput
+  tasks?: Prisma.TaskUncheckedUpdateManyWithoutPublisherNestedInput
+  applications?: Prisma.TaskApplicationUncheckedUpdateManyWithoutApplicantNestedInput
+  assignments?: Prisma.TaskAssignmentUncheckedUpdateManyWithoutAssigneeNestedInput
+  submissions?: Prisma.TaskSubmissionUncheckedUpdateManyWithoutSubmitterNestedInput
+  comments?: Prisma.TaskCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  notifications?: Prisma.NotificationUncheckedUpdateManyWithoutUserNestedInput
+  auditLogs?: Prisma.AuditLogUncheckedUpdateManyWithoutActorNestedInput
+  calendarEvents?: Prisma.CalendarEventUncheckedUpdateManyWithoutUserNestedInput
+  outgoingCalendarSubscriptions?: Prisma.CalendarSubscriptionUncheckedUpdateManyWithoutSubscriberNestedInput
+  incomingCalendarSubscriptions?: Prisma.CalendarSubscriptionUncheckedUpdateManyWithoutOwnerNestedInput
+  createdEntries?: Prisma.EntryUncheckedUpdateManyWithoutCreatedByNestedInput
+  updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
+  entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
+  entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
 }
 
 export type UserCreateWithoutTasksInput = {
@@ -2281,6 +2701,8 @@ export type UserCreateWithoutTasksInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutTasksInput = {
@@ -2312,6 +2734,8 @@ export type UserUncheckedCreateWithoutTasksInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutTasksInput = {
@@ -2359,6 +2783,8 @@ export type UserUpdateWithoutTasksInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTasksInput = {
@@ -2390,6 +2816,8 @@ export type UserUncheckedUpdateWithoutTasksInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutApplicationsInput = {
@@ -2421,6 +2849,8 @@ export type UserCreateWithoutApplicationsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutApplicationsInput = {
@@ -2452,6 +2882,8 @@ export type UserUncheckedCreateWithoutApplicationsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutApplicationsInput = {
@@ -2499,6 +2931,8 @@ export type UserUpdateWithoutApplicationsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutApplicationsInput = {
@@ -2530,6 +2964,8 @@ export type UserUncheckedUpdateWithoutApplicationsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutAssignmentsInput = {
@@ -2561,6 +2997,8 @@ export type UserCreateWithoutAssignmentsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutAssignmentsInput = {
@@ -2592,6 +3030,8 @@ export type UserUncheckedCreateWithoutAssignmentsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutAssignmentsInput = {
@@ -2639,6 +3079,8 @@ export type UserUpdateWithoutAssignmentsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignmentsInput = {
@@ -2670,6 +3112,8 @@ export type UserUncheckedUpdateWithoutAssignmentsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutSubmissionsInput = {
@@ -2701,6 +3145,8 @@ export type UserCreateWithoutSubmissionsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutSubmissionsInput = {
@@ -2732,6 +3178,8 @@ export type UserUncheckedCreateWithoutSubmissionsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutSubmissionsInput = {
@@ -2779,6 +3227,8 @@ export type UserUpdateWithoutSubmissionsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSubmissionsInput = {
@@ -2810,6 +3260,8 @@ export type UserUncheckedUpdateWithoutSubmissionsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutCommentsInput = {
@@ -2841,6 +3293,8 @@ export type UserCreateWithoutCommentsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutCommentsInput = {
@@ -2872,6 +3326,8 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutCommentsInput = {
@@ -2919,6 +3375,8 @@ export type UserUpdateWithoutCommentsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCommentsInput = {
@@ -2950,6 +3408,8 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutNotificationsInput = {
@@ -2981,6 +3441,8 @@ export type UserCreateWithoutNotificationsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutNotificationsInput = {
@@ -3012,6 +3474,8 @@ export type UserUncheckedCreateWithoutNotificationsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutNotificationsInput = {
@@ -3059,6 +3523,8 @@ export type UserUpdateWithoutNotificationsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNotificationsInput = {
@@ -3090,6 +3556,8 @@ export type UserUncheckedUpdateWithoutNotificationsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserCreateWithoutAuditLogsInput = {
@@ -3121,6 +3589,8 @@ export type UserCreateWithoutAuditLogsInput = {
   updatedEntries?: Prisma.EntryCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserUncheckedCreateWithoutAuditLogsInput = {
@@ -3152,6 +3622,8 @@ export type UserUncheckedCreateWithoutAuditLogsInput = {
   updatedEntries?: Prisma.EntryUncheckedCreateNestedManyWithoutUpdatedByInput
   entryVersions?: Prisma.EntryVersionUncheckedCreateNestedManyWithoutCreatedByInput
   entryComments?: Prisma.EntryCommentUncheckedCreateNestedManyWithoutAuthorInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCreatedByInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedCreateNestedManyWithoutCompletedByInput
 }
 
 export type UserCreateOrConnectWithoutAuditLogsInput = {
@@ -3199,6 +3671,8 @@ export type UserUpdateWithoutAuditLogsInput = {
   updatedEntries?: Prisma.EntryUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUpdateManyWithoutCompletedByNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAuditLogsInput = {
@@ -3230,6 +3704,8 @@ export type UserUncheckedUpdateWithoutAuditLogsInput = {
   updatedEntries?: Prisma.EntryUncheckedUpdateManyWithoutUpdatedByNestedInput
   entryVersions?: Prisma.EntryVersionUncheckedUpdateManyWithoutCreatedByNestedInput
   entryComments?: Prisma.EntryCommentUncheckedUpdateManyWithoutAuthorNestedInput
+  createdSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCreatedByNestedInput
+  completedSharedWishes?: Prisma.SharedWishUncheckedUpdateManyWithoutCompletedByNestedInput
 }
 
 
@@ -3255,6 +3731,8 @@ export type UserCountOutputType = {
   updatedEntries: number
   entryVersions: number
   entryComments: number
+  createdSharedWishes: number
+  completedSharedWishes: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3275,6 +3753,8 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   updatedEntries?: boolean | UserCountOutputTypeCountUpdatedEntriesArgs
   entryVersions?: boolean | UserCountOutputTypeCountEntryVersionsArgs
   entryComments?: boolean | UserCountOutputTypeCountEntryCommentsArgs
+  createdSharedWishes?: boolean | UserCountOutputTypeCountCreatedSharedWishesArgs
+  completedSharedWishes?: boolean | UserCountOutputTypeCountCompletedSharedWishesArgs
 }
 
 /**
@@ -3406,6 +3886,20 @@ export type UserCountOutputTypeCountEntryCommentsArgs<ExtArgs extends runtime.Ty
   where?: Prisma.EntryCommentWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountCreatedSharedWishesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SharedWishWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountCompletedSharedWishesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.SharedWishWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -3437,6 +3931,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   updatedEntries?: boolean | Prisma.User$updatedEntriesArgs<ExtArgs>
   entryVersions?: boolean | Prisma.User$entryVersionsArgs<ExtArgs>
   entryComments?: boolean | Prisma.User$entryCommentsArgs<ExtArgs>
+  createdSharedWishes?: boolean | Prisma.User$createdSharedWishesArgs<ExtArgs>
+  completedSharedWishes?: boolean | Prisma.User$completedSharedWishesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -3504,6 +4000,8 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   updatedEntries?: boolean | Prisma.User$updatedEntriesArgs<ExtArgs>
   entryVersions?: boolean | Prisma.User$entryVersionsArgs<ExtArgs>
   entryComments?: boolean | Prisma.User$entryCommentsArgs<ExtArgs>
+  createdSharedWishes?: boolean | Prisma.User$createdSharedWishesArgs<ExtArgs>
+  completedSharedWishes?: boolean | Prisma.User$completedSharedWishesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -3529,6 +4027,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     updatedEntries: Prisma.$EntryPayload<ExtArgs>[]
     entryVersions: Prisma.$EntryVersionPayload<ExtArgs>[]
     entryComments: Prisma.$EntryCommentPayload<ExtArgs>[]
+    createdSharedWishes: Prisma.$SharedWishPayload<ExtArgs>[]
+    completedSharedWishes: Prisma.$SharedWishPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -3954,6 +4454,8 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   updatedEntries<T extends Prisma.User$updatedEntriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$updatedEntriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   entryVersions<T extends Prisma.User$entryVersionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$entryVersionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntryVersionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   entryComments<T extends Prisma.User$entryCommentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$entryCommentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntryCommentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  createdSharedWishes<T extends Prisma.User$createdSharedWishesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$createdSharedWishesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SharedWishPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  completedSharedWishes<T extends Prisma.User$completedSharedWishesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$completedSharedWishesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SharedWishPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4793,6 +5295,54 @@ export type User$entryCommentsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.EntryCommentScalarFieldEnum | Prisma.EntryCommentScalarFieldEnum[]
+}
+
+/**
+ * User.createdSharedWishes
+ */
+export type User$createdSharedWishesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SharedWish
+   */
+  select?: Prisma.SharedWishSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SharedWish
+   */
+  omit?: Prisma.SharedWishOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SharedWishInclude<ExtArgs> | null
+  where?: Prisma.SharedWishWhereInput
+  orderBy?: Prisma.SharedWishOrderByWithRelationInput | Prisma.SharedWishOrderByWithRelationInput[]
+  cursor?: Prisma.SharedWishWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SharedWishScalarFieldEnum | Prisma.SharedWishScalarFieldEnum[]
+}
+
+/**
+ * User.completedSharedWishes
+ */
+export type User$completedSharedWishesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SharedWish
+   */
+  select?: Prisma.SharedWishSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SharedWish
+   */
+  omit?: Prisma.SharedWishOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SharedWishInclude<ExtArgs> | null
+  where?: Prisma.SharedWishWhereInput
+  orderBy?: Prisma.SharedWishOrderByWithRelationInput | Prisma.SharedWishOrderByWithRelationInput[]
+  cursor?: Prisma.SharedWishWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.SharedWishScalarFieldEnum | Prisma.SharedWishScalarFieldEnum[]
 }
 
 /**

@@ -163,6 +163,8 @@ model User {
   updatedEntries Entry[]        @relation("EntryUpdatedBy")
   entryVersions  EntryVersion[] @relation("EntryVersionCreatedBy")
   entryComments  EntryComment[]
+  createdSharedWishes   SharedWish[] @relation("SharedWishCreatedBy")
+  completedSharedWishes SharedWish[] @relation("SharedWishCompletedBy")
 
   @@map("users")
 }
@@ -304,6 +306,7 @@ model Project {
   members ProjectMember[]
   tasks   Task[]
   entries Entry[]
+  sharedWishes SharedWish[]
 
   @@index([creatorId])
   @@index([archivedAt])
@@ -324,6 +327,27 @@ model ProjectMember {
   @@unique([projectId, userId])
   @@index([userId])
   @@map("project_members")
+}
+
+model SharedWish {
+  id            String    @id @default(uuid()) @db.Uuid
+  projectId     String    @db.Uuid
+  title         String    @db.VarChar(500)
+  position      Int       @default(0)
+  sourceKey     String?   @db.VarChar(100)
+  createdById   String    @db.Uuid
+  completedById String?   @db.Uuid
+  completedAt   DateTime? @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  createdBy   User    @relation("SharedWishCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  completedBy User?   @relation("SharedWishCompletedBy", fields: [completedById], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, sourceKey])
+  @@index([projectId, completedAt, position])
+  @@map("shared_wishes")
 }
 
 model Task {

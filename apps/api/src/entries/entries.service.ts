@@ -2,12 +2,14 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { ConfigService } from "@nestjs/config";
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import type { AuthUser } from "../common/auth-context";
 import type { ProjectRole } from "../generated/prisma/enums";
 import type { Prisma } from "../generated/prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { StorageService } from "../storage/storage.service";
 import type { CreateEntryCommentDto, CreateEntryDto, ListEntriesDto, UpdateEntryDto } from "./dto";
+import { JOURNAL_IMPORT_MANIFEST, parseJournalImportManifest, type JournalImportManifest } from "./journal-import";
 
 const publicUser = { id: true, displayName: true, username: true, avatarPath: true } as const;
 
@@ -16,6 +18,7 @@ export class EntriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly storage: StorageService,
   ) {}
 
   async list(user: AuthUser, query: ListEntriesDto) {
@@ -41,6 +44,7 @@ export class EntriesService {
           orderBy: [{ entryDate: "desc" }, { updatedAt: "desc" }],
           select: {
             id: true, type: true, title: true, entryDate: true, rating: true, updatedAt: true,
+            createdBy: { select: publicUser },
             _count: { select: { versions: true, comments: { where: { deletedAt: null } } } },
           },
         }),
@@ -156,6 +160,10 @@ export class EntriesService {
   async importMarkdown(user: AuthUser) {
     const projectId = await this.resolveProjectId(user);
     const importRoot = this.config.get<string>("JOURNAL_IMPORT_DIR", "/data/journal-import");
+    const manifestRaw = await this.readOptionalFile(join(importRoot, JOURNAL_IMPORT_MANIFEST));
+    if (manifestRaw !== null) {
+      return this.importJournalManifest(projectId, importRoot, parseJournalImportManifest(manifestRaw));
+    }
     const files = await this.findMarkdownFiles(importRoot);
     let imported = 0;
     let skipped = 0;
@@ -189,6 +197,11 @@ export class EntriesService {
       imported += 1;
     }
     return { imported, skipped, source: importRoot };
+  }
+
+  async journalAsset(user: AuthUser, storageName: string): Promise<string> {
+    await this.resolveProjectId(user);
+    return this.storage.journalAssetPath(storageName);
   }
 
   async listComments(user: AuthUser, entryId: string) {
@@ -277,6 +290,107 @@ export class EntriesService {
       else if (item.isFile() && item.name.toLowerCase().endsWith(".md")) files.push(itemPath);
     }
     return files;
+  }
+
+  private async importJournalManifest(projectId: string, importRoot: string, manifest: JournalImportManifest) {
+    const usernames = [...new Set(manifest.entries.flatMap((entry) => [
+      entry.authorUsername,
+      ...entry.comments.map((comment) => comment.authorUsername),
+    ]))];
+    const users = await this.prisma.user.findMany({
+      where: { username: { in: usernames } },
+      select: { id: true, username: true, role: true, status: true },
+    });
+    const usersByName = new Map(users.map((account) => [account.username, account]));
+    const missingUsers = usernames.filter((username) => !usersByName.has(username));
+    if (missingUsers.length) throw new BadRequestException(`找不到迁移作者账号：${missingUsers.join("、")}`);
+    const inactiveUsers = users.filter((account) => account.status !== "ACTIVE");
+    if (inactiveUsers.length) throw new BadRequestException(`迁移作者账号已停用：${inactiveUsers.map((account) => account.username).join("、")}`);
+    const memberships = await this.prisma.projectMember.findMany({
+      where: { projectId, userId: { in: users.filter((account) => account.role !== "ADMIN").map((account) => account.id) } },
+      select: { userId: true },
+    });
+    const memberIds = new Set(memberships.map((membership) => membership.userId));
+    const usersOutsideProject = users.filter((account) => account.role !== "ADMIN" && !memberIds.has(account.id));
+    if (usersOutsideProject.length) {
+      throw new BadRequestException(`请先把这些账号加入 la vie：${usersOutsideProject.map((account) => account.username).join("、")}`);
+    }
+
+    const prepared = await Promise.all(manifest.entries.map(async (entry) => {
+      const content = await readFile(this.resolveImportPath(importRoot, entry.file), "utf8");
+      const importedPath = `manifest:${entry.sourceId}`;
+      const importHash = createHash("sha256").update(JSON.stringify({ ...entry, content })).digest("hex");
+      const existing = await this.prisma.entry.findFirst({ where: { importedPath } });
+      if (existing && existing.importHash !== importHash) {
+        throw new ConflictException(`手帐 ${entry.title} 已导入，但迁移源内容发生了变化`);
+      }
+      return { entry, content, importedPath, importHash, existing: Boolean(existing) };
+    }));
+
+    for (const asset of manifest.assets) {
+      await this.storage.importJournalAsset(this.resolveImportPath(importRoot, asset.file), asset.storageName);
+    }
+
+    let imported = 0;
+    let skipped = 0;
+    let comments = 0;
+    for (const item of prepared) {
+      if (item.existing) { skipped += 1; continue; }
+      const author = usersByName.get(item.entry.authorUsername)!;
+      const entryDate = this.dateOnly(item.entry.date);
+      const createdAt = new Date(`${item.entry.date}T12:00:00+08:00`);
+      await this.prisma.$transaction(async (tx) => {
+        const created = await tx.entry.create({
+          data: {
+            projectId,
+            type: "JOURNAL",
+            title: item.entry.title,
+            contentMarkdown: item.content,
+            entryDate,
+            category: item.entry.category,
+            tags: item.entry.tags,
+            visibility: "PUBLIC",
+            createdById: author.id,
+            updatedById: author.id,
+            importedPath: item.importedPath,
+            importHash: item.importHash,
+            createdAt,
+          },
+        });
+        await tx.entryVersion.create({
+          data: { entryId: created.id, version: 1, title: created.title, contentMarkdown: created.contentMarkdown, createdById: author.id, createdAt },
+        });
+        if (item.entry.comments.length) {
+          await tx.entryComment.createMany({
+            data: item.entry.comments.map((comment, index) => ({
+              entryId: created.id,
+              authorId: usersByName.get(comment.authorUsername)!.id,
+              content: comment.content,
+              createdAt: new Date(createdAt.getTime() + (index + 1) * 60_000),
+            })),
+          });
+        }
+      });
+      imported += 1;
+      comments += item.entry.comments.length;
+    }
+    return { imported, skipped, comments, assets: manifest.assets.length, source: importRoot, mode: "structured" };
+  }
+
+  private async readOptionalFile(path: string): Promise<string | null> {
+    try {
+      return await readFile(path, "utf8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    }
+  }
+
+  private resolveImportPath(root: string, relativePath: string): string {
+    const resolvedRoot = resolve(root);
+    const path = resolve(resolvedRoot, relativePath);
+    if (!path.startsWith(`${resolvedRoot}${sep}`)) throw new BadRequestException("手帐迁移文件路径不正确");
+    return path;
   }
 
   private parseMarkdown(raw: string, fileStat: { mtime: Date }) {

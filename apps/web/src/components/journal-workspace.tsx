@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- journal images are authenticated same-origin assets with imported dimensions */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -8,7 +9,8 @@ import { Button, Field, Input, Textarea } from "./ui";
 
 type EntryKind = "JOURNAL" | "REVIEW";
 type FilterKind = "ALL" | EntryKind;
-type EntryIndex = { id: string; type: EntryKind; title: string; entryDate: string; rating: number | string | null; updatedAt: string; _count?: { versions: number; comments: number } };
+type EntryAuthor = { id: string; displayName: string; username: string; avatarPath?: string | null };
+type EntryIndex = { id: string; type: EntryKind; title: string; entryDate: string; rating: number | string | null; updatedAt: string; createdBy: EntryAuthor; _count?: { versions: number; comments: number } };
 type EntryIndexResponse = { records: EntryIndex[]; total: number; canImport: boolean };
 type Entry = EntryIndex & { contentMarkdown: string; category: string | null; tags: string[]; visibility: "PUBLIC" | "PRIVATE"; version: number; importedPath?: string | null };
 type EntryComment = { id: string; content: string; createdAt: string; canDelete: boolean; author: { id: string; displayName: string; username: string; avatarPath?: string | null } };
@@ -258,7 +260,7 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
       <span className="journal-liquid-orb orb-one" aria-hidden="true" /><span className="journal-liquid-orb orb-two" aria-hidden="true" />
       {detailLoading || !current ? <div className="journal-entry-loading">正在打开这一页…</div> : <>
         <div className="journal-entry-copy">
-          <div className="journal-entry-meta"><span className="journal-kind"><span>{current.type === "REVIEW" ? "★" : "▧"}</span>{current.type === "REVIEW" ? "点评" : "手帐"}</span><span>{current.visibility === "PUBLIC" ? "两个人可见" : "仅自己"}</span>{current.importedPath && <span className="journal-imported"><FileText size={12} />由 Markdown 迁入</span>}{current.rating != null && <span className="journal-rating">{stars(current.rating)}</span>}</div>
+          <div className="journal-entry-meta"><span className="journal-kind"><span>{current.type === "REVIEW" ? "★" : "▧"}</span>{current.type === "REVIEW" ? "点评" : "手帐"}</span><span>{current.createdBy.displayName}</span><span>{current.visibility === "PUBLIC" ? "两个人可见" : "仅自己"}</span>{current.importedPath && <span className="journal-imported"><FileText size={12} />由 Markdown 迁入</span>}{current.rating != null && <span className="journal-rating">{stars(current.rating)}</span>}</div>
           <h2>{current.title}</h2><MarkdownPreview value={current.contentMarkdown} compact />
           <div className="journal-entry-foot"><span><MessageCircle size={14} />{currentRecord?._count?.comments ?? 0} 条回应</span><span>{current.category || "日常"}</span></div>
         </div>
@@ -271,7 +273,7 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
       <div className="journal-history-line" aria-hidden="true" />
       <div className="journal-history-viewport" ref={railRef} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
         <div className="journal-history-spacer" aria-hidden="true" />
-        <div className="journal-history-items">{records.map((record, index) => <button key={record.id} type="button" aria-label={`${formatDate(record.entryDate)}：${record.title}`} className={`journal-history-tick${record.type === "REVIEW" ? " review" : ""}${index === activeIndex ? " active" : ""}`} onClick={() => onSelect(index)}><span>{isMonthStart(record, index, records) ? formatMonth(record.entryDate) : ""}</span><i /></button>)}</div>
+        <div className="journal-history-items">{records.map((record, index) => <button key={record.id} type="button" aria-label={`${formatDate(record.entryDate)}，${record.createdBy.displayName}：${record.title}`} className={`journal-history-tick${record.type === "REVIEW" ? " review" : ""}${index === activeIndex ? " active" : ""}`} onClick={() => onSelect(index)}><span>{isMonthStart(record, index, records) ? formatMonth(record.entryDate) : ""}</span><i /></button>)}</div>
         <div className="journal-history-spacer" aria-hidden="true" />
       </div>
       <span className="journal-history-selection" aria-hidden="true">{currentRecord ? shortDate(currentRecord.entryDate) : "—"}</span>
@@ -281,7 +283,7 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
 
 function ReaderView({ entry, loading, onEdit }: { entry: Entry | null; loading: boolean; onEdit: () => void }) {
   if (loading || !entry) return <div className="loading">正在打开这一页…</div>;
-  return <article className={`journal-reader${entry.type === "REVIEW" ? " review" : ""}`}><span className="journal-liquid-orb orb-one" aria-hidden="true" /><aside><small>{entry.type === "REVIEW" ? "REVIEW" : "JOURNAL"}</small><strong>{shortDate(entry.entryDate)}</strong><span>{formatDate(entry.entryDate)}</span>{entry.rating != null && <b>{stars(entry.rating)}</b>}</aside><div className="journal-reader-body"><div className="journal-reader-actions"><div><span>{entry.category || "日常"}</span>{entry.importedPath && <em><FileText size={12} />Markdown 迁入</em>}</div><Button className="ghost small" onClick={onEdit}><PenLine size={14} />编辑</Button></div><h2>{entry.title}</h2><MarkdownPreview value={entry.contentMarkdown} /><div className="journal-tags">{entry.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div></article>;
+  return <article className={`journal-reader${entry.type === "REVIEW" ? " review" : ""}`}><span className="journal-liquid-orb orb-one" aria-hidden="true" /><aside><small>{entry.type === "REVIEW" ? "REVIEW" : "JOURNAL"}</small><strong>{shortDate(entry.entryDate)}</strong><span>{formatDate(entry.entryDate)}</span><span>{entry.createdBy.displayName}</span>{entry.rating != null && <b>{stars(entry.rating)}</b>}</aside><div className="journal-reader-body"><div className="journal-reader-actions"><div><span>{entry.category || "日常"}</span>{entry.importedPath && <em><FileText size={12} />Markdown 迁入</em>}</div><Button className="ghost small" onClick={onEdit}><PenLine size={14} />编辑</Button></div><h2>{entry.title}</h2><MarkdownPreview value={entry.contentMarkdown} /><div className="journal-tags">{entry.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div></article>;
 }
 
 function MemoryView({ records }: { records: EntryIndex[] }) {
@@ -300,7 +302,7 @@ function JournalConversation({ entry, comments, loading, value, saving, onChange
   return <section className="journal-conversation">
     <header><div><span className="journal-conversation-icon"><MessageCircle size={18} /></span><div><h2>留一句话</h2><p>正文继续记录生活，回应留给此刻的我们。</p></div></div><span>{comments.length} 条回应</span></header>
     <div className="journal-comment-list">
-      {loading ? <div className="journal-comment-empty">正在找回这些回应…</div> : comments.length ? comments.map((comment, index) => <article className={`journal-comment-card hue-${index % 4}`} key={comment.id}><span className="journal-comment-avatar" aria-hidden="true">{comment.author.displayName.slice(0, 1)}</span><div><div className="journal-comment-head"><strong>{comment.author.displayName}</strong><time dateTime={comment.createdAt}>{formatCommentTime(comment.createdAt)}</time>{comment.canDelete && <button type="button" aria-label="删除这条回应" onClick={() => onRemove(comment.id)}><Trash2 size={13} /></button>}</div><p>{comment.content}</p></div></article>) : <div className="journal-comment-empty"><Sparkles size={19} /><span>还没有回应。可以写下看完这一篇时最先想到的话。</span></div>}
+      {loading ? <div className="journal-comment-empty">正在找回这些回应…</div> : comments.length ? comments.map((comment, index) => <article className={`journal-comment-card hue-${index % 4}`} key={comment.id}><span className="journal-comment-avatar" aria-hidden="true">{comment.author.displayName.slice(0, 1)}</span><div><div className="journal-comment-head"><strong>{comment.author.displayName}</strong><time dateTime={comment.createdAt}>{formatCommentTime(comment.createdAt)}</time>{comment.canDelete && <button type="button" aria-label="删除这条回应" onClick={() => onRemove(comment.id)}><Trash2 size={13} /></button>}</div><MarkdownPreview value={comment.content} /></div></article>) : <div className="journal-comment-empty"><Sparkles size={19} /><span>还没有回应。可以写下看完这一篇时最先想到的话。</span></div>}
     </div>
     <form className="journal-comment-composer" onSubmit={onSubmit}>
       <div className="journal-quick-replies">{quickReplies.map((reply) => <button type="button" key={reply} onClick={() => onChange(reply)}>{reply}</button>)}</div>
@@ -317,7 +319,7 @@ function EntryEditor({ editor, saving, onChange, onClose, onDelete, onSubmit }: 
 
 function MarkdownPreview({ value, compact = false }: { value: string; compact?: boolean }) {
   if (compact) {
-    const plain = value.replace(/```[\s\S]*?```/g, "").replace(/^#{1,6}\s+/gm, "").replace(/^[-*>]\s+/gm, "").replace(/\n+/g, " ").trim() || "还没有写下正文。";
+    const plain = value.replace(/```[\s\S]*?```/g, "").replace(/!\[[^\]]*\]\([^)]+\)/g, "[图片]").replace(/^#{1,6}\s+/gm, "").replace(/^[-*>]\s+/gm, "").replace(/\n+/g, " ").trim() || "还没有写下正文。";
     return <div className="journal-markdown compact"><p>{plain}</p></div>;
   }
   const blocks = parseMarkdown(value);
@@ -326,13 +328,14 @@ function MarkdownPreview({ value, compact = false }: { value: string; compact?: 
     if (block.type === "heading") return block.level === 1 ? <h3 key={key}>{block.text}</h3> : <h4 key={key}>{block.text}</h4>;
     if (block.type === "quote") return <blockquote key={key}>{block.text}</blockquote>;
     if (block.type === "list") return block.ordered ? <ol key={key}>{block.items.map((item) => <li key={item}>{item}</li>)}</ol> : <ul key={key}>{block.items.map((item) => <li key={item}>{item}</li>)}</ul>;
+    if (block.type === "image") return <figure className="journal-markdown-image" key={key}><img src={block.src} alt={block.alt} loading="lazy" />{block.alt && <figcaption>{block.alt}</figcaption>}</figure>;
     if (block.type === "code") return <pre key={key}><code>{block.text}</code></pre>;
     if (block.type === "rule") return <hr key={key} />;
     return <p key={key}>{block.text}</p>;
   })}</div>;
 }
 
-type MarkdownBlock = { type: "heading"; level: number; text: string } | { type: "quote"; text: string } | { type: "list"; ordered: boolean; items: string[] } | { type: "code"; text: string } | { type: "rule" } | { type: "paragraph"; text: string };
+type MarkdownBlock = { type: "heading"; level: number; text: string } | { type: "quote"; text: string } | { type: "list"; ordered: boolean; items: string[] } | { type: "image"; alt: string; src: string } | { type: "code"; text: string } | { type: "rule" } | { type: "paragraph"; text: string };
 function parseMarkdown(value: string): MarkdownBlock[] {
   const lines = value.trim() ? value.replace(/\r/g, "").split("\n") : ["还没有写下正文。"];
   const blocks: MarkdownBlock[] = [];
@@ -347,6 +350,8 @@ function parseMarkdown(value: string): MarkdownBlock[] {
     }
     const heading = line.match(/^(#{1,6})\s+(.+)$/);
     if (heading) { blocks.push({ type: "heading", level: heading[1]!.length, text: heading[2]! }); index += 1; continue; }
+    const image = line.trim().match(/^!\[([^\]]*)\]\(([^)#]+)(?:#[^)]*)?\)$/);
+    if (image) { blocks.push({ type: "image", alt: image[1]!, src: image[2]! }); index += 1; continue; }
     if (/^\s*([-*_])\1{2,}\s*$/.test(line)) { blocks.push({ type: "rule" }); index += 1; continue; }
     if (/^>\s?/.test(line)) {
       const quote: string[] = [];
@@ -360,7 +365,7 @@ function parseMarkdown(value: string): MarkdownBlock[] {
       blocks.push({ type: "list", ordered, items }); continue;
     }
     const paragraph = [line.trim()]; index += 1;
-    while (index < lines.length && (lines[index] ?? "").trim() && !/^(#{1,6})\s+|^```|^>\s?|^\s*(?:[-*+]|\d+\.)\s+/.test(lines[index] ?? "")) { paragraph.push((lines[index] ?? "").trim()); index += 1; }
+    while (index < lines.length && (lines[index] ?? "").trim() && !/^(#{1,6})\s+|^```|^>\s?|^\s*(?:[-*+]|\d+\.)\s+|^!\[[^\]]*\]\([^)]+\)$/.test(lines[index] ?? "")) { paragraph.push((lines[index] ?? "").trim()); index += 1; }
     blocks.push({ type: "paragraph", text: paragraph.join(" ") });
   }
   return blocks;

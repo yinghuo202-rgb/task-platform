@@ -16,7 +16,7 @@ import { assertTransition } from "./task-state-machine";
 const listInclude = {
   publisher: { select: { id: true, username: true, displayName: true, avatarPath: true } },
   project: { select: { id: true, name: true, color: true } },
-  assignments: { select: { assigneeId: true, assignedAt: true, dueAt: true, status: true } },
+  assignments: { select: { assigneeId: true, assignedAt: true, dueAt: true, completedAt: true, status: true } },
   _count: { select: { applications: true, assignments: true } },
 } satisfies Prisma.TaskInclude;
 
@@ -60,6 +60,13 @@ export class TasksService {
       if (query.scope === "assigned") Object.assign(where, { assignments: { some: { assigneeId: user.id, status: { not: "CANCELLED" } } } });
       if (query.scope === "completed") Object.assign(where, { status: "COMPLETED", OR: [{ publisherId: user.id }, { assignments: { some: { assigneeId: user.id } } }] });
       if (query.scope === "applications") Object.assign(where, { applications: { some: { applicantId: user.id } } });
+      if (query.scope === "available") Object.assign(where, {
+        publisherId: { not: user.id },
+        status: "PUBLISHED",
+        assignments: { none: { assigneeId: user.id } },
+        applications: { none: { applicantId: user.id, status: "PENDING" } },
+        AND: [{ OR: [{ deadline: null }, { deadline: { gt: new Date() } }] }],
+      });
     }
 
     const [items, total] = await this.prisma.$transaction([
@@ -239,6 +246,7 @@ function toSummary(task: Prisma.TaskGetPayload<{ include: typeof listInclude }>,
     rewardAmount: task.rewardAmount?.toString() ?? null,
     personalDueAt: personalAssignment?.dueAt?.toISOString() ?? null,
     personalAssignedAt: personalAssignment?.assignedAt.toISOString() ?? null,
+    personalCompletedAt: personalAssignment?.completedAt?.toISOString() ?? null,
     personalAssignmentStatus: personalAssignment?.status ?? null,
     applicationCount: _count.applications,
     assignmentCount: _count.assignments,

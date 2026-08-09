@@ -13,6 +13,7 @@
 - Argon2id 密码哈希、Access/Refresh HttpOnly Cookie、Refresh Token 哈希存储和轮换、会话撤销、账号禁用。
 - 同源检查、双提交 CSRF Token、安全响应头、参数白名单、限流、统一错误、请求 ID 和脱敏审计。
 - 私密清单创建、编辑、取消、搜索、分类/状态筛选、分页和排序。
+- 「一起做的事 / 我接取的 / 我发布的」三栏清单；共同愿望可直接勾选，个人任务支持自定义奖励和对方一键接取，并可一键显示完成历史与完成时间。
 - AUTO 原子接取和 APPROVAL 申请审批；Serializable 事务、任务行锁及唯一约束防止超额接取。
 - 开始任务、提交成果、退回修改、再次提交、验收完成和争议状态。
 - 参与者私密留言、站内通知、个人工作台。
@@ -74,6 +75,7 @@ task-platform/
 - `task_submissions`、`submission_attachments`
 - `task_comments`、`notifications`、`audit_logs`
 - `entries`、`entry_versions`、`entry_comments`（手帐/点评正文、Markdown 导入来源、在线版本与成员回应）
+- `shared_wishes`（共同愿望、排序、完成人和完成时间）
 
 所有业务主键为 UUID。奖励金额为 `Decimal(18,2)`；时间由 PostgreSQL/Prisma 以 UTC 写入并以 ISO 时间传输。重要历史外键使用 `RESTRICT`，任务、账号和留言主要通过状态或软删除保留历史。
 
@@ -92,7 +94,9 @@ CLAIMED/IN_PROGRESS/SUBMITTED/REVISION_REQUESTED → DISPUTED
 
 生产环境由四个独立容器组成：`reverse-proxy`、`web`、`api`、`db`。NAS 只拉取或导入 Docker 镜像，不在设备上安装 Node.js、pnpm，也不在启动时编译源码。数据库和上传文件均保存在 NAS 的绝对路径中；删除或升级容器不会删除业务数据。
 
-手帐迁移时，将原有 `.md` 文件复制到 `JOURNAL_IMPORT_PATH` 指向的目录，在「手帐」页由管理员点击“导入 Markdown”。导入会保留原文件，只按文件路径和内容哈希去重；后续编辑直接写入 PostgreSQL，不会回写源文件。
+手帐迁移时，将原有 `.md` 文件复制到 `JOURNAL_IMPORT_PATH` 指向的目录，在「手帐」页由管理员点击“导入 Markdown”。普通 Markdown 仍按单文件导入；目录根部存在 `journal-import-manifest.json` 时，系统会改用结构化迁移，可分别指定正文作者、评论作者并复制清单中的图片。结构化迁移会先核对账号与 `la vie` 成员关系，再按稳定来源标识去重；后续编辑直接写入 PostgreSQL，不会回写源文件。
+
+双人历史手帐可使用 `scripts/prepare-journal-import.mjs` 生成结构化迁移目录。生成结果必须整目录复制，不能只复制 `entries` 下的 Markdown；重复执行导入会跳过已完成的条目，源内容改变时会停止并提示冲突，避免静默产生副本。
 
 ### 1. 准备镜像
 
@@ -231,6 +235,18 @@ docker compose up -d --force-recreate reverse-proxy api web
 ```
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
+
+### 从 v1.1.0 在线更新到 v1.2.0
+
+保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
+
+```bash
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.2.0
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.2.0
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.0
+```
+
+然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
 
 ## 本地开发
 

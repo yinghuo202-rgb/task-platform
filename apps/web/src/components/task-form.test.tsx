@@ -28,10 +28,11 @@ describe("TaskForm simplified fields", () => {
     expect(screen.getByLabelText(/具体执行时间/)).toBeInTheDocument();
   });
 
-  it("removes marketplace-only fields from the private checklist", () => {
+  it("keeps a simple custom reward while removing marketplace-only fields", () => {
     render(<TaskForm />);
-    expect(screen.getByLabelText(/想做的事/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/想请对方做的事/)).toBeInTheDocument();
     expect(screen.getByLabelText(/备注/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/完成奖励/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/回报/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/参与地点/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/验收标准/)).not.toBeInTheDocument();
