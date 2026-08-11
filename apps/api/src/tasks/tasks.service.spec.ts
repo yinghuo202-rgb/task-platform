@@ -64,4 +64,21 @@ describe("task project visibility", () => {
       }),
     }));
   });
+
+  it("notifies the other active project members when a task is published", async () => {
+    const notificationCreateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const taskUpdate = vi.fn().mockResolvedValue({ id: "task-id", status: "PUBLISHED" });
+    const prisma = {
+      task: { findUnique: vi.fn().mockResolvedValue({ id: "task-id", projectId: "project-id", publisherId: "publisher-id", title: "一起整理照片", status: "DRAFT", rewardType: "OTHER" }) },
+      projectMember: { findMany: vi.fn().mockResolvedValue([{ userId: "partner-id" }]) },
+      $transaction: vi.fn().mockImplementation((callback) => callback({ task: { update: taskUpdate }, notification: { createMany: notificationCreateMany } })),
+    } as unknown as PrismaService;
+    const audit = { record: vi.fn() } as unknown as AuditService;
+    const projects = { assertCompanionContributor: vi.fn().mockResolvedValue("MEMBER") } as unknown as ProjectsService;
+    const service = new TasksService(prisma, audit, projects);
+
+    await service.publish("task-id", { id: "publisher-id", sessionId: "session", role: "USER" });
+
+    expect(notificationCreateMany).toHaveBeenCalledWith({ data: [{ userId: "partner-id", taskId: "task-id", type: "TASK_PUBLISHED", title: "有新任务发布", content: "一起整理照片" }] });
+  });
 });

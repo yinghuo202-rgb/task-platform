@@ -131,9 +131,21 @@ export class TasksService {
   async publish(id: string, user: AuthUser) {
     const task = await this.editable(id, user);
     assertTransition(task.status, "PUBLISHED");
-    const updated = await this.prisma.task.update({
-      where: { id },
-      data: { status: "PUBLISHED", publishedAt: new Date(), rewardFulfillmentStatus: task.rewardType === "POINTS" ? "PENDING" : "NOT_APPLICABLE", version: { increment: 1 } },
+    const recipients = await this.prisma.projectMember.findMany({
+      where: { projectId: task.projectId, userId: { not: user.id }, user: { status: "ACTIVE" } },
+      select: { userId: true },
+    });
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const published = await tx.task.update({
+        where: { id },
+        data: { status: "PUBLISHED", publishedAt: new Date(), rewardFulfillmentStatus: task.rewardType === "POINTS" ? "PENDING" : "NOT_APPLICABLE", version: { increment: 1 } },
+      });
+      if (recipients.length) {
+        await tx.notification.createMany({
+          data: recipients.map(({ userId }) => ({ userId, taskId: id, type: "TASK_PUBLISHED" as const, title: "有新任务发布", content: task.title })),
+        });
+      }
+      return published;
     });
     await this.audit.record({ actorId: user.id, action: "TASK_PUBLISHED", entityType: "Task", entityId: id });
     return updated;

@@ -89,6 +89,7 @@ export class EntriesService {
     const projectId = await this.resolveProjectId(user);
     await this.assertProjectCanWrite(projectId, user);
     const entryDate = this.dateOnly(dto.entryDate);
+    const recipients = dto.visibility === "PRIVATE" ? [] : await this.notificationRecipients(projectId, user.id);
     const entry = await this.prisma.$transaction(async (tx) => {
       const created = await tx.entry.create({
         data: {
@@ -108,6 +109,11 @@ export class EntriesService {
       await tx.entryVersion.create({
         data: { entryId: created.id, version: 1, title: created.title, contentMarkdown: created.contentMarkdown, createdById: user.id },
       });
+      if (recipients.length) {
+        await tx.notification.createMany({
+          data: recipients.map(({ userId }) => ({ userId, type: "SYSTEM" as const, title: "手帐有新内容", content: created.title })),
+        });
+      }
       return created;
     });
     return entry;
@@ -123,6 +129,8 @@ export class EntriesService {
     }
     if (current.version !== dto.version) throw new ConflictException("手帐已被更新，请刷新后重试");
     const nextVersion = current.version + 1;
+    const nextVisibility = dto.visibility ?? current.visibility;
+    const recipients = nextVisibility === "PRIVATE" ? [] : await this.notificationRecipients(current.projectId, user.id);
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.entry.update({
         where: { id },
@@ -142,7 +150,19 @@ export class EntriesService {
       await tx.entryVersion.create({
         data: { entryId: id, version: nextVersion, title: updated.title, contentMarkdown: updated.contentMarkdown, createdById: user.id },
       });
+      if (recipients.length) {
+        await tx.notification.createMany({
+          data: recipients.map(({ userId }) => ({ userId, type: "SYSTEM" as const, title: "手帐已更新", content: updated.title })),
+        });
+      }
       return updated;
+    });
+  }
+
+  private notificationRecipients(projectId: string, actorId: string) {
+    return this.prisma.projectMember.findMany({
+      where: { projectId, userId: { not: actorId }, user: { status: "ACTIVE" } },
+      select: { userId: true },
     });
   }
 

@@ -6,6 +6,7 @@ import { CalendarDays, Check, ChevronLeft, ChevronRight, ListTodo, Plus, Trash2,
 import type { CalendarEvent as PersonalCalendarEvent, CalendarFeedEvent, CalendarSubscriptionOverview, TaskSummary } from "@task-platform/shared-types";
 import { apiFetch, ApiError } from "@/lib/api";
 import { personalTaskTimeLabel } from "@/lib/task-time";
+import { HomeReminderStrip } from "./home-reminder-strip";
 import { Button, Field, Input, Textarea } from "./ui";
 
 type CalendarView = "month" | "week" | "day";
@@ -47,9 +48,13 @@ export function CalendarWorkspace() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [subscriptionBusy, setSubscriptionBusy] = useState("");
+  const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
     if (window.matchMedia("(max-width: 640px)").matches) setView("day");
+    setCurrentTime(Date.now());
+    const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const range = useMemo(() => calendarRange(anchor, view), [anchor, view]);
@@ -101,6 +106,10 @@ export function CalendarWorkspace() {
 
   const selectedItems = useMemo(() => items.filter((item) => occursOn(item, selectedDate)), [items, selectedDate]);
   const unscheduledTasks = useMemo(() => tasks.filter((task) => !task.personalDueAt && !task.deadline && task.personalAssignmentStatus !== "COMPLETED" && task.personalAssignmentStatus !== "CANCELLED"), [tasks]);
+  const upcomingSchedule = useMemo(() => {
+    const next = items.find((item) => item.source !== "entry" && item.end.getTime() >= currentTime);
+    return next ? { title: next.title, startsAt: next.start } : null;
+  }, [currentTime, items]);
 
   const openCreate = (date = selectedDate) => {
     setEditingId(null);
@@ -184,14 +193,15 @@ export function CalendarWorkspace() {
   const goToday = () => { const today = new Date(); setAnchor(today); setSelectedDate(startOfDay(today)); };
 
   return <div className="calendar-page">
-    <header className="calendar-page-header">
-      <div><span className="eyebrow">LA VIE · TODAY</span><h1>日历</h1><p>把自己的安排、两个人的日子和要完成的事情放在一起。</p></div>
-      <div className="calendar-header-actions"><Button className="secondary" onClick={() => setSubscriptionOpen(true)}><UserPlus size={17} />订阅日历{(subscriptions?.incoming.filter((item) => item.status === "PENDING").length ?? 0) > 0 && <b>{subscriptions!.incoming.filter((item) => item.status === "PENDING").length}</b>}</Button><Button onClick={() => openCreate()}><Plus size={17} />新建日程</Button></div>
-    </header>
+    <HomeReminderStrip upcoming={upcomingSchedule} />
     <section className="calendar-surface">
       <div className="calendar-toolbar">
         <div className="calendar-navigation"><button onClick={goToday}>今天</button><button aria-label="上一段时间" onClick={() => navigate(-1)}><ChevronLeft size={18} /></button><button aria-label="下一段时间" onClick={() => navigate(1)}><ChevronRight size={18} /></button><h2>{rangeLabel(anchor, view)}</h2></div>
-        <div className="calendar-view-tabs" role="tablist" aria-label="日历视图"><button className={view === "month" ? "active" : ""} aria-selected={view === "month"} role="tab" onClick={() => setView("month")}>月</button><button className={view === "week" ? "active" : ""} aria-selected={view === "week"} role="tab" onClick={() => setView("week")}>周</button><button className={view === "day" ? "active" : ""} aria-selected={view === "day"} role="tab" onClick={() => setView("day")}>日</button></div>
+        <div className="calendar-toolbar-controls">
+          <div className="calendar-view-tabs" role="tablist" aria-label="日历视图"><button className={view === "month" ? "active" : ""} aria-selected={view === "month"} role="tab" onClick={() => setView("month")}>月</button><button className={view === "week" ? "active" : ""} aria-selected={view === "week"} role="tab" onClick={() => setView("week")}>周</button><button className={view === "day" ? "active" : ""} aria-selected={view === "day"} role="tab" onClick={() => setView("day")}>日</button></div>
+          <Button className="secondary small calendar-tool-button" onClick={() => setSubscriptionOpen(true)}><UserPlus size={15} />订阅{(subscriptions?.incoming.filter((item) => item.status === "PENDING").length ?? 0) > 0 && <b>{subscriptions!.incoming.filter((item) => item.status === "PENDING").length}</b>}</Button>
+          <Button className="small calendar-tool-button" onClick={() => openCreate()}><Plus size={15} />新建</Button>
+        </div>
       </div>
       {error && <div className="form-message calendar-message" role="alert">{error}</div>}
       <div className="calendar-content">

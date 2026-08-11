@@ -238,14 +238,14 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从旧版本在线更新到 v1.4.2
+### 从旧版本在线更新到 v1.5.0
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.4.2
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.4.2
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.4.2
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.5.0
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.5.0
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.5.0
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
@@ -257,6 +257,8 @@ v1.2.9 兼容极空间本机转发端口动态变化：`127.0.0.1`/`localhost` �
 v1.4.0 在 v1.3.0 的手机端优化基础上，继续修正手帐日期与快速切换的并发问题，完善日历日视图、拖动预览和乐观更新，统一登录 Cookie 有效期，并加入更新前备份保留策略与镜像发布质量检查。
 
 v1.4.2 精简手帐为“时光流”和“翻页看”两种视图；修复纵轴快速拖动后详情可能停留在加载状态的问题，并为翻页视图增加左右滑动、方向键和上下篇按钮。
+
+v1.5.0 移除首页大标题区，改为可直达提醒页的极简即时提醒；提醒会聚合下一项日程、手帐更新、新任务和协作通知。日历订阅、新建日程与月/周/日切换统一收进工具栏，同时为公开手帐更新和新任务发布补齐站内通知。
 
 ## 本地开发
 
