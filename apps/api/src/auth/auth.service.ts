@@ -56,7 +56,7 @@ export class AuthService {
   async login(dto: LoginDto, req: Request, res: Response) {
     const identifier = dto.identifier.trim().toLowerCase();
     const user = await this.prisma.user.findFirst({
-      where: { OR: [{ email: identifier }, { username: dto.identifier.trim() }] },
+      where: { OR: [{ email: identifier }, { username: { equals: dto.identifier.trim(), mode: "insensitive" } }] },
     });
     if (!user || !(await argon2.verify(user.passwordHash, dto.password))) {
       throw new UnauthorizedException({ code: "INVALID_CREDENTIALS", message: "用户名、邮箱或密码错误" });

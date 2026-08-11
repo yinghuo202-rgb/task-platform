@@ -13,8 +13,8 @@ const bodyHeadings = new Set([
   "游戏线", "运动线", "学习线", "项目线", "购物线",
 ]);
 const sources = [
-  { key: "fragments", root: fragmentsRoot, entryAuthor: "Cristina", commentAuthor: "yinghuo202", tag: "七零八碎", italicComments: false },
-  { key: "truefacts", root: factsRoot, entryAuthor: "yinghuo202", commentAuthor: "Cristina", tag: "TrueFactsToday", italicComments: true },
+  { key: "fragments", root: fragmentsRoot, entryAuthor: "Cristina_zl", commentAuthor: "yinghuo202", tag: "七零八碎", italicComments: false },
+  { key: "truefacts", root: factsRoot, entryAuthor: "yinghuo202", commentAuthor: "Cristina_zl", tag: "TrueFactsToday", italicComments: true },
 ];
 
 mkdirSync(join(outputRoot, "entries"), { recursive: true });
@@ -78,12 +78,12 @@ const commentCount = entries.reduce((total, entry) => total + entry.comments.len
 writeFileSync(join(outputRoot, "README.txt"), [
   "la vie 手帐迁移包",
   "",
-  `手帐：${entries.length} 篇（Cristina ${fragmentCount} 篇，yinghuo202 ${factsCount} 篇）`,
+  `手帐：${entries.length} 篇（Cristina_zl ${fragmentCount} 篇，yinghuo202 ${factsCount} 篇）`,
   `评论：${commentCount} 条`,
   `图片：${assets.size} 张`,
   "",
   "将本目录内的全部内容复制到 NAS 的 JOURNAL_IMPORT_DIR，然后由管理员在网页点击“导入旧 Markdown”。",
-  "导入前请确认 Cristina 已加入 la vie；不要单独导入 entries 目录里的 Markdown。",
+  "导入前请确认 Cristina_zl 已加入 la vie；不要单独导入 entries 目录里的 Markdown。",
   "重复执行会跳过已经成功迁入的手帐。",
   "",
 ].join("\n"), "utf8");

@@ -238,14 +238,14 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从 v1.1.0 在线更新到 v1.2.1
+### 从 v1.1.0 在线更新到 v1.2.2
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.2.1
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.2.1
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.1
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.2.2
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.2.2
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.2
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
