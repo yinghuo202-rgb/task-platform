@@ -165,6 +165,9 @@ export class EntriesService {
       return this.importJournalManifest(projectId, importRoot, parseJournalImportManifest(manifestRaw));
     }
     const files = await this.findMarkdownFiles(importRoot);
+    if (!files.length) {
+      throw new BadRequestException("导入目录中没有 Markdown 文件，请先解压迁移包并把 entries 目录内容放入导入目录");
+    }
     let imported = 0;
     let skipped = 0;
     for (const filePath of files) {

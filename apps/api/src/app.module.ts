@@ -34,6 +34,7 @@ import { UsersModule } from "./users/users.module";
         JWT_ACCESS_EXPIRES_IN: Joi.string().default("15m"),
         JWT_REFRESH_EXPIRES_IN: Joi.string().default("30d"),
         PUBLIC_APP_URL: Joi.string().uri().required(),
+        ALLOWED_ORIGINS: Joi.string().allow("").default(""),
         REGISTRATION_INVITE_CODE: Joi.string().allow("").min(12).default(""),
         COOKIE_SECURE: Joi.boolean().truthy("true").falsy("false").default(false),
         UPLOAD_DIR: Joi.string().default("/data/uploads"),

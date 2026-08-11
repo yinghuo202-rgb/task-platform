@@ -14,6 +14,7 @@ type EntryIndex = { id: string; type: EntryKind; title: string; entryDate: strin
 type EntryIndexResponse = { records: EntryIndex[]; total: number; canImport: boolean };
 type Entry = EntryIndex & { contentMarkdown: string; category: string | null; tags: string[]; visibility: "PUBLIC" | "PRIVATE"; version: number; importedPath?: string | null };
 type EntryComment = { id: string; content: string; createdAt: string; canDelete: boolean; author: { id: string; displayName: string; username: string; avatarPath?: string | null } };
+type ImportResult = { imported: number; skipped: number; comments?: number; assets?: number; mode?: "structured" };
 type EditorState = { id: string | null; version: number; type: EntryKind; title: string; entryDate: string; rating: string; category: string; tags: string; contentMarkdown: string; visibility: "PUBLIC" | "PRIVATE" };
 
 const emptyEditor = (): EditorState => ({ id: null, version: 1, type: "JOURNAL", title: "", entryDate: toDateInput(new Date()), rating: "", category: "", tags: "", contentMarkdown: "", visibility: "PUBLIC" });
@@ -28,6 +29,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -173,9 +175,14 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const importEntries = async () => {
     setImporting(true);
     setError("");
+    setNotice("");
     try {
-      await apiFetch("/entries/import", { method: "POST" });
+      const response = await apiFetch<ImportResult>("/entries/import", { method: "POST" });
       await loadIndex();
+      const result = response.data;
+      const detail = result.comments == null ? "" : `，${result.comments} 条回应`;
+      const mode = result.mode === "structured" ? "结构化迁移" : "Markdown 迁移";
+      setNotice(`${mode}完成：新增 ${result.imported} 篇，跳过 ${result.skipped} 篇${detail}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Markdown 导入失败");
     } finally {
@@ -240,6 +247,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     </header>
     <div className="journal-toolbar"><div className="journal-view-tabs" role="tablist" aria-label="手帐视图">{([ ["stream", "时光流"], ["reader", "翻页看"], ["memory", "回忆"] ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>{label}</button>)}</div><div className="journal-filters">{([ ["ALL", "全部"], ["JOURNAL", "手帐"], ["REVIEW", "点评"] ] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={filter === key} className={filter === key ? "active" : ""} onClick={() => setFilterAndReset(key)}>{label}</button>)}</div></div>
     {error && <div className="form-message" role="alert">{error}</div>}
+    {notice && <div className="form-message success" role="status">{notice}</div>}
     {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : <>
       {view === "stream" && <StreamView records={filteredRecords} activeIndex={activeIndex} current={selected} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onEdit={() => selected && openEditor(selected)} />}
       {view === "reader" && <ReaderView entry={selected} loading={detailLoading} onEdit={() => selected && openEditor(selected)} />}

@@ -306,6 +306,7 @@ p { line-height: 1.7; }
 .textarea { min-height: 126px; resize: vertical; }
 .error { color: var(--red); font-weight: 650; }
 .form-message { padding: 12px 14px; border: 1px solid #f0c5c1; border-radius: 10px; background: var(--red-soft); color: var(--red); }
+.form-message.success { border-color: #b8ddc9; background: #e8f5ed; color: #347458; }
 .advanced-settings { overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: #fff9fb; }
 .advanced-settings > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 18px; cursor: pointer; list-style: none; color: var(--ink-strong); user-select: none; }
 .advanced-settings > summary::-webkit-details-marker { display: none; }
