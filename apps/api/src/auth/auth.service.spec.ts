@@ -69,4 +69,19 @@ describe("AuthService", () => {
     expect(result.username).toBe("worker");
     expect(harness.cookie).toHaveBeenCalledTimes(3);
   });
+
+  it("matches usernames without changing their case", async () => {
+    const harness = createHarness();
+    const passwordHash = await argon2.hash("StrongPass123!", { type: argon2.argon2id });
+    harness.prisma.user.findFirst.mockResolvedValue({ ...user, username: "Cristina_zl", passwordHash });
+    harness.prisma.user.update.mockResolvedValue({});
+    harness.prisma.authSession.create.mockResolvedValue({ id: "a17bbfa6-bc5a-4364-ab86-b8e8f87a6862" });
+    harness.prisma.authSession.update.mockResolvedValue({});
+
+    await harness.service.login({ identifier: "cristina_zl", password: "StrongPass123!" }, harness.req, harness.res);
+
+    expect(harness.prisma.user.findFirst).toHaveBeenCalledWith({
+      where: { OR: [{ email: "cristina_zl" }, { username: { equals: "cristina_zl", mode: "insensitive" } }] },
+    });
+  });
 });
