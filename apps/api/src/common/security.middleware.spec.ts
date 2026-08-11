@@ -9,11 +9,11 @@ afterEach(() => {
   process.env = { ...originalEnvironment };
 });
 
-function request(origin: string): Request {
+function request(origin: string, protocol = "https"): Request {
   return {
     method: "POST",
     path: "/api/v1/entries/import",
-    protocol: "https",
+    protocol,
     cookies: {},
     header(name: string) {
       return name.toLowerCase() === "origin" ? origin : undefined;
@@ -38,6 +38,13 @@ describe("SecurityMiddleware", () => {
     const next = () => undefined;
 
     expect(() => new SecurityMiddleware().use(request("https://vpn.example.com"), {} as Response, next)).not.toThrow();
+  });
+
+  it("accepts HTTPS origin when the proxy-to-API hop is HTTP", () => {
+    process.env.PUBLIC_APP_URL = "http://192.168.0.164:8081";
+    const next = () => undefined;
+
+    expect(() => new SecurityMiddleware().use(request("https://notes.example.com", "http"), {} as Response, next)).not.toThrow();
   });
 
   it("rejects a different origin and keeps the existing CSRF protection", () => {

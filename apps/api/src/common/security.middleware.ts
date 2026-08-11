@@ -40,7 +40,13 @@ export class SecurityMiddleware implements NestMiddleware {
     // request origin lets a reverse proxy serve the same private app through
     // a LAN IP, a VPN address, or an HTTPS domain without editing secrets.
     const host = req.get("host");
-    if (host) origins.add(`${req.protocol}://${host}`);
+    if (host) {
+      // TLS is often terminated by the NAS or an upstream tunnel. The hop
+      // between that proxy and this container can still be HTTP, so accept
+      // either scheme for the exact public Host seen by this request.
+      origins.add(`http://${host}`);
+      origins.add(`https://${host}`);
+    }
     return origins;
   }
 }
