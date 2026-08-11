@@ -240,13 +240,15 @@ model EntryVersion {
 }
 
 model EntryComment {
-  id        String    @id @default(uuid()) @db.Uuid
-  entryId   String    @db.Uuid
-  authorId  String    @db.Uuid
-  content   String    @db.VarChar(1200)
-  createdAt DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
-  deletedAt DateTime? @db.Timestamptz(3)
+  id          String    @id @default(uuid()) @db.Uuid
+  entryId     String    @db.Uuid
+  authorId    String    @db.Uuid
+  content     String    @db.VarChar(1200)
+  anchorBlock Int?
+  anchorQuote String?   @db.VarChar(500)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime? @db.Timestamptz(3)
 
   entry  Entry @relation(fields: [entryId], references: [id], onDelete: Cascade)
   author User  @relation(fields: [authorId], references: [id], onDelete: Restrict)

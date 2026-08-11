@@ -80,4 +80,15 @@ export class CreateEntryCommentDto {
   @MinLength(1)
   @MaxLength(1200)
   content!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  anchorBlock?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  anchorQuote?: string;
 }

@@ -242,7 +242,13 @@ export class EntriesService {
     await this.assertProjectCanWrite(entry.projectId, user);
     if (!dto.content.trim()) throw new BadRequestException("留言不能为空");
     const comment = await this.prisma.entryComment.create({
-      data: { entryId, authorId: user.id, content: dto.content.trim() },
+      data: {
+        entryId,
+        authorId: user.id,
+        content: dto.content.trim(),
+        anchorBlock: dto.anchorBlock,
+        anchorQuote: dto.anchorQuote?.trim().slice(0, 500) || null,
+      },
       include: { author: { select: publicUser } },
     });
     return { ...comment, canDelete: true };

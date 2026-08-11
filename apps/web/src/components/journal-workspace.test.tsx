@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { JournalWorkspace } from "./journal-workspace";
@@ -17,8 +17,12 @@ const records = [
 
 beforeEach(() => {
   apiFetch.mockReset();
-  apiFetch.mockImplementation(async (path: string) => {
+  apiFetch.mockImplementation(async (path: string, options?: { method?: string; body?: string }) => {
     if (path.startsWith("/entries?")) return { data: { records, total: records.length, canImport: false }, requestId: "index" };
+    if (path.endsWith("/comments") && options?.method === "POST") {
+      const payload = JSON.parse(options.body ?? "{}") as { content: string; anchorBlock: number; anchorQuote: string };
+      return { data: { id: "comment-1", ...payload, createdAt: "2026-08-11T01:00:00.000Z", canDelete: true, author: records[1].createdBy }, requestId: "comment" };
+    }
     if (path.endsWith("/comments")) return { data: [], requestId: "comments" };
     const id = path.split("/").at(-1);
     const record = records.find((item) => item.id === id) ?? records[0];
@@ -60,5 +64,26 @@ describe("JournalWorkspace", () => {
 
     expect(await screen.findByRole("heading", { name: "第二篇" }, { timeout: 5_000 })).toBeInTheDocument();
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
+  });
+
+  it("adds a comment directly below the long-pressed paragraph", async () => {
+    render(<JournalWorkspace />);
+    await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
+    await userEvent.click(screen.getByRole("tab", { name: "翻页看" }));
+
+    const paragraph = screen.getByLabelText("正文第 1 段，长按添加评论");
+    vi.useFakeTimers();
+    fireEvent.pointerDown(paragraph, { button: 0, clientX: 120, clientY: 160, pointerId: 2 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(530); });
+    vi.useRealTimers();
+    await userEvent.type(screen.getByPlaceholderText("写下想说的话…"), "我也记得");
+    await userEvent.click(screen.getByRole("button", { name: "发送" }));
+
+    expect(await screen.findByText("我也记得")).toBeInTheDocument();
+    expect(apiFetch).toHaveBeenCalledWith("/entries/entry-1/comments", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ content: "我也记得", anchorBlock: 0, anchorQuote: "第一篇正文" }),
+    }));
+    expect(screen.queryByText("留一句话")).not.toBeInTheDocument();
   });
 });

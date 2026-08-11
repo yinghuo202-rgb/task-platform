@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- journal images are authenticated same-origin assets with imported dimensions */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, ChevronLeft, ChevronRight, FileDown, FileText, MessageCircle, PenLine, Plus, Send, Sparkles, Star, Trash2, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, FileDown, FileText, MessageCircle, PenLine, Plus, Send, Star, Trash2, X } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Button, Field, Input, Textarea } from "./ui";
 
@@ -12,7 +12,8 @@ type EntryAuthor = { id: string; displayName: string; username: string; avatarPa
 type EntryIndex = { id: string; type: EntryKind; title: string; entryDate: string; rating: number | string | null; updatedAt: string; createdBy: EntryAuthor; _count?: { versions: number; comments: number } };
 type EntryIndexResponse = { records: EntryIndex[]; total: number; canImport: boolean };
 type Entry = EntryIndex & { contentMarkdown: string; category: string | null; tags: string[]; visibility: "PUBLIC" | "PRIVATE"; version: number; importedPath?: string | null };
-type EntryComment = { id: string; content: string; createdAt: string; canDelete: boolean; author: { id: string; displayName: string; username: string; avatarPath?: string | null } };
+type EntryComment = { id: string; content: string; anchorBlock: number | null; anchorQuote: string | null; createdAt: string; canDelete: boolean; author: { id: string; displayName: string; username: string; avatarPath?: string | null } };
+type CommentAnchor = { block: number; quote: string };
 type ImportResult = { imported: number; skipped: number; comments?: number; assets?: number; mode?: "structured" };
 type EditorState = { id: string | null; version: number; type: EntryKind; title: string; entryDate: string; rating: string; category: string; tags: string; contentMarkdown: string; visibility: "PUBLIC" | "PRIVATE" };
 
@@ -37,6 +38,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const [comments, setComments] = useState<EntryComment[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [commentAnchor, setCommentAnchor] = useState<CommentAnchor | null>(null);
   const [commentSaving, setCommentSaving] = useState(false);
   const railRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ y: number; scrollTop: number } | null>(null);
@@ -129,10 +131,14 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     if (!currentRecordId) {
       setSelected(null);
       setComments([]);
+      setCommentAnchor(null);
+      setCommentText("");
       setDetailLoading(false);
       setCommentsLoading(false);
       return;
     }
+    setCommentAnchor(null);
+    setCommentText("");
     setDetailLoading(true);
     setCommentsLoading(true);
     const id = currentRecordId;
@@ -258,13 +264,14 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
 
   const submitComment = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!selected || !commentText.trim()) return;
+    if (!selected || !commentAnchor || !commentText.trim()) return;
     setCommentSaving(true);
     setError("");
     try {
-      const response = await apiFetch<EntryComment>(`/entries/${selected.id}/comments`, { method: "POST", body: JSON.stringify({ content: commentText.trim() }) });
+      const response = await apiFetch<EntryComment>(`/entries/${selected.id}/comments`, { method: "POST", body: JSON.stringify({ content: commentText.trim(), anchorBlock: commentAnchor.block, anchorQuote: commentAnchor.quote }) });
       setComments((current) => [...current, response.data]);
       setCommentText("");
+      setCommentAnchor(null);
       setRecords((current) => current.map((record) => record.id === selected.id ? { ...record, _count: { versions: record._count?.versions ?? 1, comments: (record._count?.comments ?? 0) + 1 } } : record));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "留言发送失败");
@@ -316,8 +323,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     {notice && <div className="form-message success" role="status">{notice}</div>}
     {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : !filteredRecords.length ? <div className="empty"><BookOpen size={30} /><h2>没有这类记录</h2><p>换一个筛选条件，或写下第一篇。</p></div> : <>
       {view === "stream" && <StreamView records={filteredRecords} activeIndex={activeIndex} current={currentEntry} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onOpenReader={() => setView("reader")} />}
-      {view === "reader" && <ReaderView activeIndex={activeIndex} count={filteredRecords.length} entry={currentEntry} loading={detailLoading} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} />}
-      {currentEntry && <JournalConversation entry={currentEntry} comments={comments} loading={commentsLoading} value={commentText} saving={commentSaving} onChange={setCommentText} onSubmit={submitComment} onRemove={(id) => void removeComment(id)} />}
+      {view === "reader" && <ReaderView activeIndex={activeIndex} count={filteredRecords.length} entry={currentEntry} loading={detailLoading} comments={comments} commentsLoading={commentsLoading} commentAnchor={commentAnchor} commentValue={commentText} commentSaving={commentSaving} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onRequestComment={setCommentAnchor} onCancelComment={() => { setCommentAnchor(null); setCommentText(""); }} onCommentChange={setCommentText} onCommentSubmit={submitComment} onRemoveComment={(id) => void removeComment(id)} />}
     </>}
     {editor && <EntryEditor editor={editor} saving={saving} onChange={setEditor} onClose={() => setEditor(null)} onDelete={() => void removeEntry()} onSubmit={saveEntry} />}
   </div></section>;
@@ -372,21 +378,62 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
   </div>;
 }
 
-function ReaderView({ activeIndex, count, entry, loading, onSelect, onRetry, onEdit }: { activeIndex: number; count: number; entry: Entry | null; loading: boolean; onSelect: (index: number) => void; onRetry: () => void; onEdit: () => void }) {
+function ReaderView({ activeIndex, count, entry, loading, comments, commentsLoading, commentAnchor, commentValue, commentSaving, onSelect, onRetry, onEdit, onRequestComment, onCancelComment, onCommentChange, onCommentSubmit, onRemoveComment }: {
+  activeIndex: number;
+  count: number;
+  entry: Entry | null;
+  loading: boolean;
+  comments: EntryComment[];
+  commentsLoading: boolean;
+  commentAnchor: CommentAnchor | null;
+  commentValue: string;
+  commentSaving: boolean;
+  onSelect: (index: number) => void;
+  onRetry: () => void;
+  onEdit: () => void;
+  onRequestComment: (anchor: CommentAnchor) => void;
+  onCancelComment: () => void;
+  onCommentChange: (value: string) => void;
+  onCommentSubmit: (event: React.FormEvent) => void;
+  onRemoveComment: (id: string) => void;
+}) {
   const gestureRef = useRef<{ x: number; y: number } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
+  useEffect(() => () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+  }, []);
+  const clearLongPress = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  };
+  const requestBlockComment = (blockElement: HTMLElement) => {
+    const block = Number(blockElement.dataset.commentBlock);
+    if (!Number.isInteger(block) || block < 0) return;
+    gestureRef.current = null;
+    setDragX(0);
+    setDragging(false);
+    onRequestComment({ block, quote: blockElement.dataset.commentQuote ?? "" });
+  };
   const go = (delta: number) => {
     const target = activeIndex + delta;
     if (target < 0 || target >= count) return;
+    clearLongPress();
     setDragX(0);
     setDragging(false);
     onSelect(target);
   };
   const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
-    if (event.button !== 0 || (event.target as HTMLElement).closest("button, a, input, textarea")) return;
+    const target = event.target as HTMLElement;
+    if (event.button !== 0 || target.closest("button, a, input, textarea, [data-inline-comment]")) return;
     gestureRef.current = { x: event.clientX, y: event.clientY };
     setDragging(true);
+    const blockElement = target.closest<HTMLElement>("[data-comment-block]");
+    if (blockElement) {
+      clearLongPress();
+      longPressTimerRef.current = setTimeout(() => requestBlockComment(blockElement), 520);
+    }
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const onPointerMove = (event: React.PointerEvent<HTMLElement>) => {
@@ -394,9 +441,11 @@ function ReaderView({ activeIndex, count, entry, loading, onSelect, onRetry, onE
     if (!start || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
     const x = event.clientX - start.x;
     const y = event.clientY - start.y;
+    if (Math.hypot(x, y) > 10) clearLongPress();
     if (Math.abs(x) > Math.abs(y)) setDragX(Math.max(-110, Math.min(110, x)));
   };
   const finishGesture = (event: React.PointerEvent<HTMLElement>) => {
+    clearLongPress();
     const start = gestureRef.current;
     gestureRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -405,6 +454,7 @@ function ReaderView({ activeIndex, count, entry, loading, onSelect, onRetry, onE
     else { setDragX(0); setDragging(false); }
   };
   const cancelGesture = () => {
+    clearLongPress();
     gestureRef.current = null;
     setDragX(0);
     setDragging(false);
@@ -413,7 +463,19 @@ function ReaderView({ activeIndex, count, entry, loading, onSelect, onRetry, onE
     <article
       aria-label="手帐正文，左右滑动切换上下篇"
       className={`journal-reader${entry?.type === "REVIEW" ? " review" : ""}${dragging ? " dragging" : ""}`}
-      onKeyDown={(event) => { if (event.key === "ArrowLeft") { event.preventDefault(); go(-1); } if (event.key === "ArrowRight") { event.preventDefault(); go(1); } }}
+      onContextMenu={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest("button, a, input, textarea, [data-inline-comment]")) return;
+        const blockElement = target.closest<HTMLElement>("[data-comment-block]");
+        if (!blockElement) return;
+        event.preventDefault();
+        requestBlockComment(blockElement);
+      }}
+      onKeyDown={(event) => {
+        if ((event.target as HTMLElement).closest("button, a, input, textarea")) return;
+        if (event.key === "ArrowLeft") { event.preventDefault(); go(-1); }
+        if (event.key === "ArrowRight") { event.preventDefault(); go(1); }
+      }}
       onPointerCancel={cancelGesture}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -422,27 +484,71 @@ function ReaderView({ activeIndex, count, entry, loading, onSelect, onRetry, onE
       tabIndex={0}
     >
       {!entry ? <div className="journal-reader-loading" aria-live="polite">{loading ? "正在打开这一页…" : <button type="button" onClick={onRetry}>这一页暂时没有打开，点击重试</button>}</div> : <>
-        <span className="journal-liquid-orb orb-one" aria-hidden="true" /><aside><small>{entry.type === "REVIEW" ? "REVIEW" : "JOURNAL"}</small><strong>{shortDate(entry.entryDate)}</strong><span>{formatDate(entry.entryDate)}</span><span>{entry.createdBy.displayName}</span>{entry.rating != null && <b>{stars(entry.rating)}</b>}</aside><div className="journal-reader-body"><div className="journal-reader-actions"><div><span>{entry.category || "日常"}</span>{entry.importedPath && <em><FileText size={12} />Markdown 迁入</em>}</div><Button className="ghost small" onClick={onEdit}><PenLine size={14} />编辑</Button></div><h2>{entry.title}</h2><MarkdownPreview value={entry.contentMarkdown} /><div className="journal-tags">{entry.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div>
+        <span className="journal-liquid-orb orb-one" aria-hidden="true" /><aside><small>{entry.type === "REVIEW" ? "REVIEW" : "JOURNAL"}</small><strong>{shortDate(entry.entryDate)}</strong><span>{formatDate(entry.entryDate)}</span><span>{entry.createdBy.displayName}</span>{entry.rating != null && <b>{stars(entry.rating)}</b>}</aside><div className="journal-reader-body"><div className="journal-reader-actions"><div><span>{entry.category || "日常"}</span>{entry.importedPath && <em><FileText size={12} />Markdown 迁入</em>}</div><Button className="ghost small" onClick={onEdit}><PenLine size={14} />编辑</Button></div><h2>{entry.title}</h2><p className="journal-inline-comment-hint"><MessageCircle size={13} />长按正文任意一段添加评论</p><CommentableMarkdown entryId={entry.id} value={entry.contentMarkdown} comments={comments} commentsLoading={commentsLoading} activeAnchor={commentAnchor} commentValue={commentValue} commentSaving={commentSaving} onRequestComment={onRequestComment} onCancelComment={onCancelComment} onCommentChange={onCommentChange} onCommentSubmit={onCommentSubmit} onRemoveComment={onRemoveComment} /><div className="journal-tags">{entry.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div>
       </>}
     </article>
     <nav className="journal-reader-pagination" aria-label="手帐翻页"><button type="button" disabled={activeIndex === 0} onClick={() => go(-1)}><ChevronLeft size={16} />上一篇</button><span>{activeIndex + 1} / {count}<small>左右滑动切换</small></span><button type="button" disabled={activeIndex >= count - 1} onClick={() => go(1)}>下一篇<ChevronRight size={16} /></button></nav>
   </div>;
 }
 
-function JournalConversation({ entry, comments, loading, value, saving, onChange, onSubmit, onRemove }: { entry: Entry; comments: EntryComment[]; loading: boolean; value: string; saving: boolean; onChange: (value: string) => void; onSubmit: (event: React.FormEvent) => void; onRemove: (id: string) => void }) {
-  const quickReplies = ["我也记得这一刻", "下次还要一起", "看到这里又笑了"];
-  return <section className="journal-conversation">
-    <header><div><span className="journal-conversation-icon"><MessageCircle size={18} /></span><div><h2>留一句话</h2><p>正文继续记录生活，回应留给此刻的我们。</p></div></div><span>{comments.length} 条回应</span></header>
-    <div className="journal-comment-list">
-      {loading ? <div className="journal-comment-empty">正在找回这些回应…</div> : comments.length ? comments.map((comment, index) => <article className={`journal-comment-card hue-${index % 4}`} key={comment.id}><span className="journal-comment-avatar" aria-hidden="true">{comment.author.displayName.slice(0, 1)}</span><div><div className="journal-comment-head"><strong>{comment.author.displayName}</strong><time dateTime={comment.createdAt}>{formatCommentTime(comment.createdAt)}</time>{comment.canDelete && <button type="button" aria-label="删除这条回应" onClick={() => onRemove(comment.id)}><Trash2 size={13} /></button>}</div><MarkdownPreview value={comment.content} /></div></article>) : <div className="journal-comment-empty"><Sparkles size={19} /><span>还没有回应。可以写下看完这一篇时最先想到的话。</span></div>}
-    </div>
-    <form className="journal-comment-composer" onSubmit={onSubmit}>
-      <div className="journal-quick-replies">{quickReplies.map((reply) => <button type="button" key={reply} onClick={() => onChange(reply)}>{reply}</button>)}</div>
-      <label htmlFor={`entry-comment-${entry.id}`}>回应《{entry.title}》</label>
-      <div><textarea id={`entry-comment-${entry.id}`} maxLength={1200} rows={3} value={value} onChange={(event) => onChange(event.target.value)} placeholder="写下此刻想到的一句话…" /><button type="submit" disabled={saving || !value.trim()} aria-label="发送回应"><Send size={17} /><span>{saving ? "发送中" : "发送"}</span></button></div>
-      <small>{value.length} / 1200</small>
-    </form>
-  </section>;
+function CommentableMarkdown({ entryId, value, comments, commentsLoading, activeAnchor, commentValue, commentSaving, onRequestComment, onCancelComment, onCommentChange, onCommentSubmit, onRemoveComment }: {
+  entryId: string;
+  value: string;
+  comments: EntryComment[];
+  commentsLoading: boolean;
+  activeAnchor: CommentAnchor | null;
+  commentValue: string;
+  commentSaving: boolean;
+  onRequestComment: (anchor: CommentAnchor) => void;
+  onCancelComment: () => void;
+  onCommentChange: (value: string) => void;
+  onCommentSubmit: (event: React.FormEvent) => void;
+  onRemoveComment: (id: string) => void;
+}) {
+  const blocks = parseMarkdown(value);
+  const commentsByBlock = new Map<number, EntryComment[]>();
+  for (const comment of comments) {
+    const quote = normalizeAnchorText(comment.anchorQuote ?? "");
+    const matchingBlock = quote ? blocks.findIndex((block) => normalizeAnchorText(markdownBlockText(block)) === quote) : -1;
+    const fallbackBlock = comment.anchorBlock != null && comment.anchorBlock < blocks.length ? comment.anchorBlock : blocks.length - 1;
+    const blockIndex = matchingBlock >= 0 ? matchingBlock : Math.max(0, fallbackBlock);
+    commentsByBlock.set(blockIndex, [...(commentsByBlock.get(blockIndex) ?? []), comment]);
+  }
+  return <div className="journal-markdown rich commentable">
+    {blocks.map((block, index) => {
+      const quote = markdownBlockText(block).slice(0, 500);
+      const blockComments = commentsByBlock.get(index) ?? [];
+      const isCommenting = activeAnchor?.block === index;
+      return <div
+        className={`journal-commentable-block${isCommenting ? " commenting" : ""}`}
+        data-comment-block={index}
+        data-comment-quote={quote}
+        key={`${block.type}-${index}`}
+        tabIndex={0}
+        aria-label={`正文第 ${index + 1} 段，长按添加评论`}
+        onKeyDown={(event) => {
+          if ((event.key === "Enter" || event.key.toLowerCase() === "c") && event.target === event.currentTarget) {
+            event.preventDefault();
+            onRequestComment({ block: index, quote });
+          }
+        }}
+      >
+        {renderMarkdownBlock(block, `content-${index}`)}
+        {blockComments.length > 0 && <div className="journal-inline-comments" data-inline-comment>
+          {blockComments.map((comment, commentIndex) => <article className={`journal-inline-comment hue-${commentIndex % 4}`} key={comment.id}>
+            <span className="journal-comment-avatar" aria-hidden="true">{comment.author.displayName.slice(0, 1)}</span>
+            <div><div className="journal-comment-head"><strong>{comment.author.displayName}</strong><time dateTime={comment.createdAt}>{formatCommentTime(comment.createdAt)}</time>{comment.canDelete && <button type="button" aria-label="删除这条评论" onClick={() => onRemoveComment(comment.id)}><Trash2 size={13} /></button>}</div><p>{comment.content}</p></div>
+          </article>)}
+        </div>}
+        {commentsLoading && index === blocks.length - 1 && <span className="journal-inline-comments-loading" data-inline-comment>正在载入评论…</span>}
+        {isCommenting && <form className="journal-inline-comment-composer" data-inline-comment onSubmit={onCommentSubmit}>
+          <label htmlFor={`entry-comment-${entryId}-${index}`}>评论这一段</label>
+          <textarea id={`entry-comment-${entryId}-${index}`} autoFocus maxLength={1200} rows={2} value={commentValue} onChange={(event) => onCommentChange(event.target.value)} placeholder="写下想说的话…" />
+          <div><small>{commentValue.length} / 1200</small><button type="button" onClick={onCancelComment}>取消</button><button className="send" type="submit" disabled={commentSaving || !commentValue.trim()}><Send size={14} />{commentSaving ? "发送中" : "发送"}</button></div>
+        </form>}
+      </div>;
+    })}
+  </div>;
 }
 
 function EntryEditor({ editor, saving, onChange, onClose, onDelete, onSubmit }: { editor: EditorState; saving: boolean; onChange: (value: EditorState) => void; onClose: () => void; onDelete: () => void; onSubmit: (event: React.FormEvent) => void }) {
@@ -455,19 +561,26 @@ function MarkdownPreview({ value, compact = false }: { value: string; compact?: 
     return <div className="journal-markdown compact"><p>{plain}</p></div>;
   }
   const blocks = parseMarkdown(value);
-  return <div className="journal-markdown rich">{blocks.map((block, index) => {
-    const key = `${block.type}-${index}`;
-    if (block.type === "heading") return block.level === 1 ? <h3 key={key}>{block.text}</h3> : <h4 key={key}>{block.text}</h4>;
-    if (block.type === "quote") return <blockquote key={key}>{block.text}</blockquote>;
-    if (block.type === "list") return block.ordered ? <ol key={key}>{block.items.map((item) => <li key={item}>{item}</li>)}</ol> : <ul key={key}>{block.items.map((item) => <li key={item}>{item}</li>)}</ul>;
-    if (block.type === "image") return <figure className="journal-markdown-image" key={key}><img src={block.src} alt={block.alt} loading="lazy" />{block.alt && <figcaption>{block.alt}</figcaption>}</figure>;
-    if (block.type === "code") return <pre key={key}><code>{block.text}</code></pre>;
-    if (block.type === "rule") return <hr key={key} />;
-    return <p key={key}>{block.text}</p>;
-  })}</div>;
+  return <div className="journal-markdown rich">{blocks.map((block, index) => renderMarkdownBlock(block, `${block.type}-${index}`))}</div>;
 }
 
 type MarkdownBlock = { type: "heading"; level: number; text: string } | { type: "quote"; text: string } | { type: "list"; ordered: boolean; items: string[] } | { type: "image"; alt: string; src: string } | { type: "code"; text: string } | { type: "rule" } | { type: "paragraph"; text: string };
+function renderMarkdownBlock(block: MarkdownBlock, key: string) {
+  if (block.type === "heading") return block.level === 1 ? <h3 key={key}>{block.text}</h3> : <h4 key={key}>{block.text}</h4>;
+  if (block.type === "quote") return <blockquote key={key}>{block.text}</blockquote>;
+  if (block.type === "list") return block.ordered ? <ol key={key}>{block.items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ol> : <ul key={key}>{block.items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul>;
+  if (block.type === "image") return <figure className="journal-markdown-image" key={key}><img src={block.src} alt={block.alt} loading="lazy" />{block.alt && <figcaption>{block.alt}</figcaption>}</figure>;
+  if (block.type === "code") return <pre key={key}><code>{block.text}</code></pre>;
+  if (block.type === "rule") return <hr key={key} />;
+  return <p key={key}>{block.text}</p>;
+}
+function markdownBlockText(block: MarkdownBlock) {
+  if (block.type === "list") return block.items.join(" ");
+  if (block.type === "image") return block.alt || "图片";
+  if (block.type === "rule") return "分隔线";
+  return block.text;
+}
+function normalizeAnchorText(value: string) { return value.replace(/\s+/g, " ").trim().slice(0, 500); }
 function parseMarkdown(value: string): MarkdownBlock[] {
   const lines = value.trim() ? value.replace(/\r/g, "").split("\n") : ["还没有写下正文。"];
   const blocks: MarkdownBlock[] = [];

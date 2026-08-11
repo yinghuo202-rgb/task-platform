@@ -11,6 +11,30 @@ const user = { id: "11111111-1111-4111-8111-111111111111", sessionId: "session",
 const storage = {} as StorageService;
 
 describe("EntriesService private-space permissions", () => {
+  it("stores the paragraph anchor with an inline journal comment", async () => {
+    const create = vi.fn().mockImplementation(({ data }) => ({
+      id: "comment-id",
+      ...data,
+      createdAt: new Date(),
+      author: { id: "admin-id", username: "yinghuo202", displayName: "萤火" },
+    }));
+    const prisma = {
+      entry: { findUnique: vi.fn().mockResolvedValue({ projectId: "project-id", visibility: "PUBLIC", createdById: "author-id", status: "PUBLISHED" }) },
+      entryComment: { create },
+    } as unknown as PrismaService;
+    const service = new EntriesService(prisma, new ConfigService(), storage);
+
+    await service.createComment({ id: "admin-id", sessionId: "session", role: "ADMIN" }, "entry-id", {
+      content: "  我也记得  ",
+      anchorBlock: 3,
+      anchorQuote: "  那天一起散步  ",
+    });
+
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      data: { entryId: "entry-id", authorId: "admin-id", content: "我也记得", anchorBlock: 3, anchorQuote: "那天一起散步" },
+    }));
+  });
+
   it("does not let a viewer create a hand journal entry", async () => {
     const transaction = vi.fn();
     const prisma = {

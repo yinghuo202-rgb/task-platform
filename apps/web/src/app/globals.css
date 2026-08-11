@@ -905,6 +905,34 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .journal-reader-actions > div { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .journal-reader-actions em { display: inline-flex; align-items: center; gap: 4px; font-style: normal; }
 .journal-reader-body h2 { margin: 28px 0 24px; font-size: clamp(1.8rem, 4vw, 2.7rem); }
+.journal-inline-comment-hint { display: flex; align-items: center; gap: 5px; margin: -14px 0 18px; color: var(--muted); font-size: .7rem; }
+.journal-markdown.commentable { display: grid; gap: 2px; }
+.journal-commentable-block { position: relative; margin: 0 -10px; padding: 6px 10px; border-radius: 14px; outline: none; transition: background .16s ease, box-shadow .16s ease; -webkit-touch-callout: none; }
+.journal-commentable-block:hover, .journal-commentable-block:focus-visible { background: rgb(239 247 243 / 58%); box-shadow: inset 3px 0 0 rgb(114 158 139 / 28%); }
+.journal-commentable-block.commenting { background: rgb(239 247 243 / 76%); box-shadow: inset 3px 0 0 rgb(89 139 117 / 52%); }
+.journal-commentable-block > :first-child { margin-top: 0; }
+.journal-commentable-block > :last-child { margin-bottom: 0; }
+.journal-inline-comments { display: grid; gap: 7px; margin: 8px 0 2px 18px; }
+.journal-inline-comment { display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: start; gap: 8px; padding: 9px 10px; border: 1px solid rgb(255 255 255 / 78%); border-radius: 14px 14px 14px 6px; background: rgb(232 244 238 / 76%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 84%); }
+.journal-inline-comment.hue-1 { background: rgb(239 235 248 / 72%); }
+.journal-inline-comment.hue-2 { background: rgb(247 239 222 / 72%); }
+.journal-inline-comment.hue-3 { background: rgb(230 241 247 / 72%); }
+.journal-comment-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 10px 10px 10px 4px; color: #385549; background: linear-gradient(145deg, #cce6dc, #efd98d); font-size: .68rem; font-weight: 850; }
+.journal-comment-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.journal-comment-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; }
+.journal-comment-head time { margin-left: auto; color: var(--muted); font-size: .58rem; }
+.journal-comment-head button { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 7px; color: var(--muted); background: transparent; cursor: pointer; }
+.journal-comment-head button:hover { color: var(--red); background: var(--red-soft); }
+.journal-inline-comment p { margin: 3px 0 0; color: var(--ink); font-size: .8rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.journal-inline-comments-loading { display: block; margin: 7px 0 0 18px; color: var(--muted); font-size: .68rem; }
+.journal-inline-comment-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 9px; margin: 9px 0 2px 18px; padding: 10px; border: 1px solid rgb(125 166 147 / 25%); border-radius: 14px 14px 14px 6px; background: rgb(255 255 255 / 76%); box-shadow: 0 10px 28px rgb(65 78 67 / 8%), inset 0 1px 0 rgb(255 255 255 / 92%); }
+.journal-inline-comment-composer label { grid-column: 1 / -1; color: var(--muted); font-size: .66rem; }
+.journal-inline-comment-composer textarea { grid-column: 1 / -1; min-height: 54px; padding: 7px 8px; border: 0; border-radius: 9px; outline: 0; color: var(--ink); background: rgb(244 249 246 / 74%); resize: vertical; line-height: 1.55; }
+.journal-inline-comment-composer > div { grid-column: 1 / -1; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.journal-inline-comment-composer small { margin-right: auto; color: var(--muted); font-size: .58rem; }
+.journal-inline-comment-composer button { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 5px 9px; border: 0; border-radius: 9px; color: var(--muted); background: transparent; cursor: pointer; font-size: .7rem; }
+.journal-inline-comment-composer button.send { color: #31483f; background: linear-gradient(145deg, #efd478, #a8d1c0); font-weight: 800; }
+.journal-inline-comment-composer button:disabled { opacity: .42; cursor: not-allowed; }
 .journal-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; color: var(--brand); font-size: .8rem; }
 .journal-reader-pagination { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 13px 8px 3px; }
 .journal-reader-pagination button { display: inline-flex; align-items: center; gap: 4px; width: max-content; padding: 7px 10px; border: 0; border-radius: 10px; color: var(--ink); background: transparent; cursor: pointer; font-size: .78rem; }
@@ -913,40 +941,6 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .journal-reader-pagination button:disabled { opacity: .3; cursor: default; }
 .journal-reader-pagination > span { display: grid; place-items: center; color: var(--muted); font-size: .72rem; }
 .journal-reader-pagination small { margin-top: 2px; font-size: .58rem; }
-.journal-conversation { display: grid; gap: 18px; padding: 24px; border: 1px solid rgb(255 255 255 / 78%); border-radius: 25px 25px 25px 10px; background: linear-gradient(135deg, rgb(255 255 255 / 63%), rgb(240 247 243 / 48%)); box-shadow: 0 22px 65px rgb(65 78 67 / 10%), inset 0 1px 0 rgb(255 255 255 / 92%); backdrop-filter: blur(26px) saturate(140%); }
-.journal-conversation > header { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
-.journal-conversation > header > div { display: flex; align-items: center; gap: 12px; }
-.journal-conversation > header h2 { margin: 0; font-size: 1.12rem; }
-.journal-conversation > header p { margin: 2px 0 0; color: var(--muted); font-size: .76rem; }
-.journal-conversation > header > span { color: var(--muted); font-size: .76rem; }
-.journal-conversation-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 14px 14px 14px 6px; color: #46685c; background: linear-gradient(145deg, #e2f1e8, #f5dc94); box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%); }
-.journal-comment-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.journal-comment-card { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; gap: 10px; padding: 13px; border: 1px solid rgb(255 255 255 / 72%); border-radius: 17px 17px 17px 7px; background: rgb(255 255 255 / 54%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 76%); }
-.journal-comment-card.hue-1 { background: rgb(239 235 248 / 58%); }
-.journal-comment-card.hue-2 { background: rgb(237 246 242 / 60%); }
-.journal-comment-card.hue-3 { background: rgb(251 241 220 / 59%); }
-.journal-comment-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 12px 12px 12px 5px; color: #385549; background: linear-gradient(145deg, #cce6dc, #efd98d); font-size: .78rem; font-weight: 850; }
-.journal-comment-head { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.journal-comment-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; }
-.journal-comment-head time { margin-left: auto; color: var(--muted); font-size: .62rem; }
-.journal-comment-head button { display: grid; place-items: center; width: 25px; height: 25px; padding: 0; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; }
-.journal-comment-head button:hover { color: var(--red); background: var(--red-soft); }
-.journal-comment-card p { margin: 5px 0 0; color: var(--ink); font-size: .84rem; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
-.journal-comment-card .journal-markdown.rich { max-width: none; font-family: inherit; font-size: .84rem; line-height: 1.65; }
-.journal-comment-card .journal-markdown.rich p { margin-top: 5px; }
-.journal-comment-card .journal-markdown-image { margin: 9px 0 0; }
-.journal-comment-card .journal-markdown-image img { max-width: min(100%, 420px); border-radius: 13px; }
-.journal-comment-empty { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 78px; padding: 18px; border: 1px dashed rgb(132 155 143 / 35%); border-radius: 17px; color: var(--muted); background: rgb(255 255 255 / 32%); font-size: .8rem; }
-.journal-comment-composer { position: relative; display: grid; gap: 8px; padding: 14px; border: 1px solid rgb(255 255 255 / 82%); border-radius: 19px 19px 19px 8px; background: rgb(255 255 255 / 66%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 96%), 0 12px 32px rgb(65 78 67 / 6%); }
-.journal-comment-composer > label { color: var(--muted); font-size: .7rem; }
-.journal-comment-composer > div:not(.journal-quick-replies) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 9px; }
-.journal-comment-composer textarea { min-height: 76px; resize: vertical; padding: 10px 12px; border: 0; outline: 0; color: var(--ink); background: transparent; line-height: 1.6; }
-.journal-comment-composer > div > button[type="submit"] { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 86px; height: 40px; border: 0; border-radius: 13px; color: #31483f; background: linear-gradient(145deg, #efd478, #a8d1c0); box-shadow: 0 8px 16px rgb(100 132 115 / 16%), inset 0 1px 0 rgb(255 255 255 / 60%); cursor: pointer; font-weight: 800; }
-.journal-comment-composer > div > button[type="submit"]:disabled { opacity: .42; cursor: not-allowed; }
-.journal-comment-composer > small { position: absolute; right: 14px; bottom: 4px; color: var(--muted); font-size: .58rem; }
-.journal-quick-replies { display: flex; flex-wrap: wrap; gap: 6px; }
-.journal-quick-replies button { padding: 5px 8px; border: 1px solid rgb(164 187 176 / 30%); border-radius: 999px; color: var(--muted); background: rgb(235 245 240 / 58%); cursor: pointer; font-size: .68rem; }
-.journal-quick-replies button:hover { color: var(--ink-strong); background: var(--accent); }
 .journal-editor-backdrop { position: fixed; z-index: 60; inset: 0; display: grid; place-items: center; padding: 18px; background: rgb(34 29 42 / 35%); backdrop-filter: blur(5px); }
 .journal-editor { width: min(720px, 100%); max-height: min(850px, calc(100dvh - 36px)); overflow: auto; padding: 24px; border: 1px solid rgb(255 255 255 / 78%); border-radius: 25px 25px 25px 10px; background: rgb(255 255 255 / 78%); box-shadow: 0 30px 90px rgb(34 29 42 / 20%), inset 0 1px 0 rgb(255 255 255 / 95%); backdrop-filter: blur(30px) saturate(145%); }
 .journal-editor > header { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
@@ -974,7 +968,6 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
   .journal-history-tick span { display: none; }
   .journal-reader { grid-template-columns: 1fr; }
   .journal-reader > aside { min-height: 190px; }
-  .journal-comment-list { grid-template-columns: 1fr; }
   .journal-reader-pagination small { display: none; }
 }
 
@@ -990,9 +983,5 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
   .journal-entry-card { padding: 17px; }
   .journal-entry-card h2 { margin-top: 13px; font-size: 1.35rem; }
   .journal-editor { padding: 18px; border-radius: 16px; }
-  .journal-conversation { padding: 16px; }
-  .journal-conversation > header { align-items: flex-start; }
-  .journal-conversation > header > span { display: none; }
-  .journal-comment-composer > div:not(.journal-quick-replies) { grid-template-columns: 1fr; }
-  .journal-comment-composer > div > button[type="submit"] { width: 100%; }
+  .journal-inline-comments, .journal-inline-comment-composer { margin-left: 8px; }
 }
