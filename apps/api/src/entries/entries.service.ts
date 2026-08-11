@@ -116,7 +116,7 @@ export class EntriesService {
       }
       return created;
     });
-    return entry;
+    return this.get(user, entry.id);
   }
 
   async update(user: AuthUser, id: string, dto: UpdateEntryDto) {
@@ -131,7 +131,7 @@ export class EntriesService {
     const nextVersion = current.version + 1;
     const nextVisibility = dto.visibility ?? current.visibility;
     const recipients = nextVisibility === "PRIVATE" ? [] : await this.notificationRecipients(current.projectId, user.id);
-    return this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx) => {
       const updated = await tx.entry.update({
         where: { id },
         data: {
@@ -157,6 +157,7 @@ export class EntriesService {
       }
       return updated;
     });
+    return this.get(user, id);
   }
 
   private notificationRecipients(projectId: string, actorId: string) {

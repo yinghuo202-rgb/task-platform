@@ -27,6 +27,20 @@ describe("CalendarService", () => {
     })).toThrow("结束时间必须晚于开始时间");
   });
 
+  it("returns a feed-ready event after an update so the calendar can update in place", async () => {
+    const owner = { id: userId, username: "yinghuo202", displayName: "萤火", avatarPath: null, bio: null };
+    const findFirst = vi.fn().mockResolvedValue({ id: "event-id", userId, startsAt: new Date("2026-08-11T09:00:00.000Z"), endsAt: new Date("2026-08-11T10:00:00.000Z") });
+    const update = vi.fn().mockResolvedValue({ id: "event-id", userId, title: "散步", startsAt: new Date("2026-08-11T09:30:00.000Z"), endsAt: new Date("2026-08-11T10:00:00.000Z"), user: owner });
+    const service = new CalendarService({ calendarEvent: { findFirst, update } } as unknown as PrismaService);
+
+    await expect(service.update(userId, "event-id", { startsAt: "2026-08-11T09:30:00.000Z" })).resolves.toMatchObject({
+      id: "event-id",
+      owner,
+      editable: true,
+    });
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ include: { user: { select: expect.any(Object) } } }));
+  });
+
   it("does not delete another user's event", async () => {
     const findFirst = vi.fn().mockResolvedValue(null);
     const remove = vi.fn();

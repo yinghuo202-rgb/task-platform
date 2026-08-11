@@ -49,6 +49,7 @@ export function CalendarWorkspace() {
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [subscriptionBusy, setSubscriptionBusy] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
+  const eventMutationRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     if (window.matchMedia("(max-width: 640px)").matches) setView("day");
@@ -146,12 +147,14 @@ export function CalendarWorkspace() {
     setSaving(true);
     setError("");
     try {
-      await apiFetch(`/calendar/events${editingId ? `/${editingId}` : ""}`, {
+      const response = await apiFetch<CalendarFeedEvent>(`/calendar/events${editingId ? `/${editingId}` : ""}`, {
         method: editingId ? "PATCH" : "POST",
         body: JSON.stringify({ title: form.title, description: form.description, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), color: form.color, allDay: false }),
       });
+      setEvents((current) => editingId
+        ? current.map((item) => item.id === editingId ? response.data : item)
+        : [...current, response.data].sort((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime()));
       setEditorOpen(false);
-      await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "日程保存失败");
     } finally {
@@ -164,8 +167,8 @@ export function CalendarWorkspace() {
     setSaving(true);
     try {
       await apiFetch(`/calendar/events/${editingId}`, { method: "DELETE" });
+      setEvents((current) => current.filter((item) => item.id !== editingId));
       setEditorOpen(false);
-      await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "日程删除失败");
     } finally {
@@ -177,13 +180,18 @@ export function CalendarWorkspace() {
     const startsAt = shiftCalendarTime(new Date(event.startsAt), dayDelta, minuteDelta);
     const endsAt = shiftCalendarTime(new Date(event.endsAt), dayDelta, minuteDelta);
     if (startsAt >= endsAt) return;
+    const mutation = (eventMutationRef.current.get(event.id) ?? 0) + 1;
+    eventMutationRef.current.set(event.id, mutation);
     setError("");
     setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() } : item));
     try {
-      await apiFetch(`/calendar/events/${event.id}`, { method: "PATCH", body: JSON.stringify({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
+      const response = await apiFetch<CalendarFeedEvent>(`/calendar/events/${event.id}`, { method: "PATCH", body: JSON.stringify({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
+      if (eventMutationRef.current.get(event.id) === mutation) setEvents((current) => current.map((item) => item.id === event.id ? response.data : item));
     } catch (err) {
-      setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt: event.startsAt, endsAt: event.endsAt } : item));
-      setError(err instanceof ApiError ? err.message : "日程移动失败");
+      if (eventMutationRef.current.get(event.id) === mutation) {
+        setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt: event.startsAt, endsAt: event.endsAt } : item));
+        setError(err instanceof ApiError ? err.message : "日程移动失败");
+      }
     }
   };
 
@@ -192,13 +200,18 @@ export function CalendarWorkspace() {
     if (resized.startsAt.getTime() === new Date(event.startsAt).getTime() && resized.endsAt.getTime() === new Date(event.endsAt).getTime()) return;
     const startsAt = resized.startsAt.toISOString();
     const endsAt = resized.endsAt.toISOString();
+    const mutation = (eventMutationRef.current.get(event.id) ?? 0) + 1;
+    eventMutationRef.current.set(event.id, mutation);
     setError("");
     setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt, endsAt } : item));
     try {
-      await apiFetch(`/calendar/events/${event.id}`, { method: "PATCH", body: JSON.stringify(edge === "start" ? { startsAt } : { endsAt }) });
+      const response = await apiFetch<CalendarFeedEvent>(`/calendar/events/${event.id}`, { method: "PATCH", body: JSON.stringify(edge === "start" ? { startsAt } : { endsAt }) });
+      if (eventMutationRef.current.get(event.id) === mutation) setEvents((current) => current.map((item) => item.id === event.id ? response.data : item));
     } catch (err) {
-      setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt: event.startsAt, endsAt: event.endsAt } : item));
-      setError(err instanceof ApiError ? err.message : "日程时长调整失败");
+      if (eventMutationRef.current.get(event.id) === mutation) {
+        setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt: event.startsAt, endsAt: event.endsAt } : item));
+        setError(err instanceof ApiError ? err.message : "日程时长调整失败");
+      }
     }
   };
 

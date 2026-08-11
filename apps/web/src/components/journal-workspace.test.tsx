@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { JournalWorkspace } from "./journal-workspace";
+import { JournalWorkspace, upsertEntryIndex } from "./journal-workspace";
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
 
@@ -34,6 +34,26 @@ beforeEach(() => {
 });
 
 describe("JournalWorkspace", () => {
+  it("updates and reorders the local index without refetching every journal", () => {
+    const updated = {
+      ...records[1],
+      type: "JOURNAL" as const,
+      title: "刚刚更新",
+      entryDate: "2026-08-12T00:00:00.000Z",
+      updatedAt: "2026-08-12T01:00:00.000Z",
+      contentMarkdown: "新正文",
+      category: null,
+      tags: [],
+      visibility: "PUBLIC" as const,
+      version: 2,
+    };
+
+    const next = upsertEntryIndex([...records], updated);
+
+    expect(next.map((record) => record.id)).toEqual(["entry-2", "entry-1"]);
+    expect(next[0]).toMatchObject({ title: "刚刚更新", _count: { versions: 2, comments: 0 } });
+  });
+
   it("keeps only the stream and reader views", async () => {
     render(<JournalWorkspace />);
     expect(await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 })).toBeInTheDocument();

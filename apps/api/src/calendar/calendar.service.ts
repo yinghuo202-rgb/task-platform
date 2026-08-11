@@ -179,7 +179,8 @@ export class CalendarService {
         allDay: dto.allDay ?? false,
         color: dto.color ?? "#7f66ff",
       },
-    });
+      include: { user: { select: publicUserSelect } },
+    }).then(({ user, ...event }) => ({ ...event, owner: user, editable: true }));
   }
 
   async update(userId: string, id: string, dto: UpdateCalendarEventDto) {
@@ -187,7 +188,7 @@ export class CalendarService {
     const startsAt = dto.startsAt ? new Date(dto.startsAt) : event.startsAt;
     const endsAt = dto.endsAt ? new Date(dto.endsAt) : event.endsAt;
     this.assertRange(startsAt, endsAt);
-    return this.prisma.calendarEvent.update({
+    const updated = await this.prisma.calendarEvent.update({
       where: { id },
       data: {
         ...(dto.title === undefined ? {} : { title: dto.title.trim() }),
@@ -197,7 +198,10 @@ export class CalendarService {
         ...(dto.allDay === undefined ? {} : { allDay: dto.allDay }),
         ...(dto.color === undefined ? {} : { color: dto.color }),
       },
+      include: { user: { select: publicUserSelect } },
     });
+    const { user, ...updatedEvent } = updated;
+    return { ...updatedEvent, owner: user, editable: true };
   }
 
   async remove(userId: string, id: string): Promise<{ success: true }> {

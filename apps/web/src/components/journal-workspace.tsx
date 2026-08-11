@@ -15,10 +15,12 @@ type EntryComment = { id: string; content: string; anchorBlock: number | null; a
 type CommentAnchor = { block: number; quote: string };
 type ImportResult = { imported: number; skipped: number; comments?: number; assets?: number; mode?: "structured" };
 type EditorState = { id: string | null; version: number; type: EntryKind; title: string; entryDate: string; rating: string; category: string; tags: string; contentMarkdown: string; visibility: "PUBLIC" | "PRIVATE" };
+type CachedValue<T> = { value: T; cachedAt: number };
 
 const emptyEditor = (): EditorState => ({ id: null, version: 1, type: "JOURNAL", title: "", entryDate: toDateInput(new Date()), rating: "", category: "", tags: "", contentMarkdown: "", visibility: "PUBLIC" });
 const JOURNAL_TICK_HEIGHT = 24;
 const JOURNAL_TICK_WINDOW = 160;
+const JOURNAL_DETAIL_CACHE_TTL = 30_000;
 
 export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string } = {}) {
   const [records, setRecords] = useState<EntryIndex[]>([]);
@@ -45,6 +47,8 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const commentsAbortRef = useRef<AbortController | null>(null);
   const entryRequestRef = useRef(0);
   const commentsRequestRef = useRef(0);
+  const entryCacheRef = useRef(new Map<string, CachedValue<Entry>>());
+  const commentsCacheRef = useRef(new Map<string, CachedValue<EntryComment[]>>());
   const currentRecordIdRef = useRef<string | undefined>(undefined);
   const userScrolledRef = useRef(false);
 
@@ -72,7 +76,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     }
   }, []);
 
-  const loadEntry = useCallback(async (id: string) => {
+  const loadEntry = useCallback(async (id: string, showLoading = true) => {
     const requestId = ++entryRequestRef.current;
     entryAbortRef.current?.abort();
     const controller = new AbortController();
@@ -83,9 +87,10 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       controller.abort();
     }, 12_000);
     setError("");
-    setDetailLoading(true);
+    if (showLoading) setDetailLoading(true);
     try {
       const response = await apiFetch<Entry>(`/entries/${id}`, { signal: controller.signal });
+      entryCacheRef.current.set(id, { value: response.data, cachedAt: Date.now() });
       if (requestId === entryRequestRef.current && currentRecordIdRef.current === id) setSelected(response.data);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError" && !timedOut) return;
@@ -96,14 +101,15 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     }
   }, []);
 
-  const loadComments = useCallback(async (id: string) => {
+  const loadComments = useCallback(async (id: string, showLoading = true) => {
     const requestId = ++commentsRequestRef.current;
     commentsAbortRef.current?.abort();
     const controller = new AbortController();
     commentsAbortRef.current = controller;
-    setCommentsLoading(true);
+    if (showLoading) setCommentsLoading(true);
     try {
       const response = await apiFetch<EntryComment[]>(`/entries/${id}/comments`, { signal: controller.signal });
+      commentsCacheRef.current.set(id, { value: response.data, cachedAt: Date.now() });
       if (requestId === commentsRequestRef.current && currentRecordIdRef.current === id) setComments(response.data);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
@@ -136,13 +142,21 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     }
     setCommentAnchor(null);
     setCommentText("");
-    setDetailLoading(true);
-    setCommentsLoading(true);
     const id = currentRecordId;
+    const now = Date.now();
+    const cachedEntry = entryCacheRef.current.get(id);
+    const cachedComments = commentsCacheRef.current.get(id);
+    const entryIsFresh = Boolean(cachedEntry && now - cachedEntry.cachedAt < JOURNAL_DETAIL_CACHE_TTL);
+    const commentsAreFresh = Boolean(cachedComments && now - cachedComments.cachedAt < JOURNAL_DETAIL_CACHE_TTL);
+    setSelected(cachedEntry?.value ?? null);
+    setComments(cachedComments?.value ?? []);
+    setDetailLoading(!cachedEntry);
+    setCommentsLoading(!cachedComments);
+    if (entryIsFresh && commentsAreFresh) return;
     detailTimerRef.current = setTimeout(() => {
-      void loadEntry(id);
-      void loadComments(id);
-    }, 180);
+      if (!entryIsFresh) void loadEntry(id, !cachedEntry);
+      if (!commentsAreFresh) void loadComments(id, !cachedComments);
+    }, cachedEntry || cachedComments ? 0 : 80);
     return () => {
       if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
     };
@@ -159,8 +173,14 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const selectIndex = (index: number) => {
     if (!records.length) return;
     const nextIndex = Math.min(Math.max(index, 0), records.length - 1);
+    const nextId = records[nextIndex]?.id;
+    const cachedEntry = nextId ? entryCacheRef.current.get(nextId) : undefined;
+    const cachedComments = nextId ? commentsCacheRef.current.get(nextId) : undefined;
     setActiveIndex(nextIndex);
-    setDetailLoading(true);
+    setSelected(cachedEntry?.value ?? null);
+    setComments(cachedComments?.value ?? []);
+    setDetailLoading(!cachedEntry);
+    setCommentsLoading(!cachedComments);
     const rail = railRef.current;
     if (rail) {
       const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
@@ -177,8 +197,14 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     const progress = maxScroll === 0 ? 0 : rail.scrollTop / maxScroll;
     const nextIndex = Math.min(records.length - 1, Math.max(0, Math.round(progress * (records.length - 1))));
     if (nextIndex !== activeIndex) {
+      const nextId = records[nextIndex]?.id;
+      const cachedEntry = nextId ? entryCacheRef.current.get(nextId) : undefined;
+      const cachedComments = nextId ? commentsCacheRef.current.get(nextId) : undefined;
       setActiveIndex(nextIndex);
-      setDetailLoading(true);
+      setSelected(cachedEntry?.value ?? null);
+      setComments(cachedComments?.value ?? []);
+      setDetailLoading(!cachedEntry);
+      setCommentsLoading(!cachedComments);
     }
   };
 
@@ -231,9 +257,15 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
         ...(editor.id ? { version: editor.version } : {}),
       };
       const response = await apiFetch<Entry>(editor.id ? `/entries/${editor.id}` : "/entries", { method: editor.id ? "PATCH" : "POST", body: JSON.stringify(payload) });
+      const saved = response.data;
+      entryCacheRef.current.set(saved.id, { value: saved, cachedAt: Date.now() });
+      if (!editor.id) commentsCacheRef.current.set(saved.id, { value: [], cachedAt: Date.now() });
+      const nextRecords = upsertEntryIndex(records, saved);
+      setRecords(nextRecords);
+      setActiveIndex(Math.max(0, nextRecords.findIndex((record) => record.id === saved.id)));
+      setSelected(saved);
+      if (!editor.id) setComments([]);
       setEditor(null);
-      await loadIndex(response.data.id);
-      await loadEntry(response.data.id);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "保存失败");
     } finally {
@@ -247,6 +279,8 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     setNotice("");
     try {
       const response = await apiFetch<ImportResult>("/entries/import", { method: "POST" });
+      entryCacheRef.current.clear();
+      commentsCacheRef.current.clear();
       await loadIndex();
       const result = response.data;
       const detail = result.comments == null ? "" : `，${result.comments} 条回应`;
@@ -266,7 +300,11 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     setError("");
     try {
       const response = await apiFetch<EntryComment>(`/entries/${selected.id}/comments`, { method: "POST", body: JSON.stringify({ content: commentText.trim(), anchorBlock: commentAnchor.block, anchorQuote: commentAnchor.quote }) });
-      setComments((current) => [...current, response.data]);
+      setComments((current) => {
+        const next = [...current, response.data];
+        commentsCacheRef.current.set(selected.id, { value: next, cachedAt: Date.now() });
+        return next;
+      });
       setCommentText("");
       setCommentAnchor(null);
       setRecords((current) => current.map((record) => record.id === selected.id ? { ...record, _count: { versions: record._count?.versions ?? 1, comments: (record._count?.comments ?? 0) + 1 } } : record));
@@ -281,7 +319,11 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     if (!selected) return;
     try {
       await apiFetch(`/entries/${selected.id}/comments/${commentId}`, { method: "DELETE" });
-      setComments((current) => current.filter((comment) => comment.id !== commentId));
+      setComments((current) => {
+        const next = current.filter((comment) => comment.id !== commentId);
+        commentsCacheRef.current.set(selected.id, { value: next, cachedAt: Date.now() });
+        return next;
+      });
       setRecords((current) => current.map((record) => record.id === selected.id ? { ...record, _count: { versions: record._count?.versions ?? 1, comments: Math.max(0, (record._count?.comments ?? 1) - 1) } } : record));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "留言删除失败");
@@ -294,9 +336,14 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     setError("");
     try {
       await apiFetch(`/entries/${editor.id}`, { method: "DELETE" });
+      const removedId = editor.id;
+      const nextRecords = records.filter((record) => record.id !== removedId);
+      entryCacheRef.current.delete(removedId);
+      commentsCacheRef.current.delete(removedId);
       setEditor(null);
       setSelected(null);
-      await loadIndex();
+      setRecords(nextRecords);
+      setActiveIndex((current) => Math.max(0, Math.min(current, nextRecords.length - 1)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "删除失败");
     } finally {
@@ -605,6 +652,24 @@ function parseMarkdown(value: string): MarkdownBlock[] {
     blocks.push({ type: "paragraph", text: paragraph.join(" ") });
   }
   return blocks;
+}
+
+export function upsertEntryIndex(records: EntryIndex[], entry: Entry): EntryIndex[] {
+  const previous = records.find((record) => record.id === entry.id);
+  const nextRecord: EntryIndex = {
+    id: entry.id,
+    type: entry.type,
+    title: entry.title,
+    entryDate: entry.entryDate,
+    rating: entry.rating,
+    updatedAt: entry.updatedAt,
+    createdBy: entry.createdBy,
+    _count: { versions: entry.version, comments: previous?._count?.comments ?? 0 },
+  };
+  return [...records.filter((record) => record.id !== entry.id), nextRecord].sort((left, right) => {
+    const dateOrder = new Date(right.entryDate).getTime() - new Date(left.entryDate).getTime();
+    return dateOrder || new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+  });
 }
 
 function toDateInput(value: Date) { const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000); return local.toISOString().slice(0, 10); }
