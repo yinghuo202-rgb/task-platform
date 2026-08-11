@@ -47,6 +47,13 @@ describe("SecurityMiddleware", () => {
     expect(() => new SecurityMiddleware().use(request("https://notes.example.com", "http"), {} as Response, next)).not.toThrow();
   });
 
+  it("accepts a changing localhost port used by a NAS remote-access tunnel", () => {
+    process.env.PUBLIC_APP_URL = "http://192.168.0.164:8081";
+    const next = () => undefined;
+
+    expect(() => new SecurityMiddleware().use(request("http://127.0.0.1:20140"), {} as Response, next)).not.toThrow();
+  });
+
   it("rejects a different origin and keeps the existing CSRF protection", () => {
     process.env.PUBLIC_APP_URL = "http://192.168.0.164:8081";
     const next = () => undefined;
