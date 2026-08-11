@@ -315,7 +315,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     {error && <div className="form-message" role="alert">{error}</div>}
     {notice && <div className="form-message success" role="status">{notice}</div>}
     {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : !filteredRecords.length ? <div className="empty"><BookOpen size={30} /><h2>没有这类记录</h2><p>换一个筛选条件，或写下第一篇。</p></div> : <>
-      {view === "stream" && <StreamView records={filteredRecords} activeIndex={activeIndex} current={currentEntry} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} />}
+      {view === "stream" && <StreamView records={filteredRecords} activeIndex={activeIndex} current={currentEntry} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onOpenReader={() => setView("reader")} />}
       {view === "reader" && <ReaderView activeIndex={activeIndex} count={filteredRecords.length} entry={currentEntry} loading={detailLoading} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} />}
       {currentEntry && <JournalConversation entry={currentEntry} comments={comments} loading={commentsLoading} value={commentText} saving={commentSaving} onChange={setCommentText} onSubmit={submitComment} onRemove={(id) => void removeComment(id)} />}
     </>}
@@ -323,15 +323,31 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   </div></section>;
 }
 
-function StreamView({ records, activeIndex, current, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onRetry, onEdit }: {
-  records: EntryIndex[]; activeIndex: number; current: Entry | null; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: () => void;
+function StreamView({ records, activeIndex, current, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onRetry, onEdit, onOpenReader }: {
+  records: EntryIndex[]; activeIndex: number; current: Entry | null; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: () => void; onOpenReader: () => void;
 }) {
   const currentRecord = records[activeIndex];
   const windowStart = Math.max(0, Math.min(records.length - JOURNAL_TICK_WINDOW, activeIndex - Math.floor(JOURNAL_TICK_WINDOW / 2)));
   const visibleRecords = records.slice(windowStart, windowStart + JOURNAL_TICK_WINDOW);
+  const openReaderFromCard = (target: EventTarget | null) => {
+    if (!current || (target as HTMLElement | null)?.closest("button, a, input, textarea, select")) return;
+    onOpenReader();
+  };
   return <div className="journal-stream-stage">
     <div className="journal-stream-meta"><strong>{currentRecord ? formatDate(currentRecord.entryDate) : "选择一天"}</strong><span>{activeIndex + 1} / {records.length} 条记录</span></div>
-    <article className={`journal-entry-card${current?.type === "REVIEW" ? " review" : ""}`}>
+    <article
+      className={`journal-entry-card${current?.type === "REVIEW" ? " review" : ""}`}
+      role={current ? "button" : undefined}
+      tabIndex={current ? 0 : undefined}
+      aria-label={current ? `打开《${current.title}》的翻页视图` : undefined}
+      onClick={(event) => openReaderFromCard(event.target)}
+      onKeyDown={(event) => {
+        if ((event.key === "Enter" || event.key === " ") && !(event.target as HTMLElement).closest("button, a, input, textarea, select")) {
+          event.preventDefault();
+          onOpenReader();
+        }
+      }}
+    >
       <span className="journal-liquid-orb orb-one" aria-hidden="true" /><span className="journal-liquid-orb orb-two" aria-hidden="true" />
       {!current ? <div className="journal-entry-loading" aria-live="polite">{detailLoading ? "正在打开这一页…" : <button type="button" onClick={onRetry}>这一页暂时没有打开，点击重试</button>}</div> : <>
         <div className="journal-entry-copy">

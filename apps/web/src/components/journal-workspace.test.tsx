@@ -38,6 +38,16 @@ describe("JournalWorkspace", () => {
     expect(screen.queryByRole("tab", { name: "回忆" })).not.toBeInTheDocument();
   });
 
+  it("opens the selected journal in the reader when its stream card is clicked", async () => {
+    render(<JournalWorkspace />);
+    await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
+
+    await userEvent.click(screen.getByRole("button", { name: "打开《第一篇》的翻页视图" }));
+
+    expect(screen.getByRole("tab", { name: "翻页看" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("article", { name: /左右滑动/ })).toBeInTheDocument();
+  });
+
   it("switches reader entries with a horizontal swipe", async () => {
     render(<JournalWorkspace />);
     await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
