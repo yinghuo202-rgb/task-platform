@@ -238,14 +238,14 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从旧版本在线更新到 v1.7.0
+### 从旧版本在线更新到 v1.7.1
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.7.0
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.7.0
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.7.0
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.7.1
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.7.1
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.7.1
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
@@ -267,6 +267,8 @@ v1.6.0 为首页日历增加日、三日、周、月四种视图；三日视图�
 v1.6.1 支持点击时光流中的手帐卡片直接进入对应的翻页阅读视图，同时保留历史轴定位与编辑按钮的独立操作。
 
 v1.7.0 将手帐回应改为正文内批注：在翻页视图长按任意正文段落即可快速评论，评论会保存在对应段落下方；已有未定位的旧评论会无损归入正文末段。
+
+v1.7.1 将手帐编辑器收紧为类型、标题、日期和正文四项，移除评分、分类、标签及“仅自己可见”设置；已有历史元数据继续保留。
 
 ## 本地开发
 

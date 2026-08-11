@@ -949,7 +949,6 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .journal-editor-type button { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: transparent; cursor: pointer; }
 .journal-editor-type button.active { border-color: var(--accent); color: var(--ink-strong); background: var(--accent); font-weight: 750; }
 .journal-editor-textarea { min-height: 230px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.65; }
-.journal-visibility { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .82rem; }
 .journal-editor-actions { justify-content: flex-end; padding-top: 4px; }
 .journal-editor-actions > span { flex: 1; }
 .journal-editor-actions .button { min-width: 90px; }

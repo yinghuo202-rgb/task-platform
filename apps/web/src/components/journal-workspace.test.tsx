@@ -42,6 +42,22 @@ describe("JournalWorkspace", () => {
     expect(screen.queryByRole("tab", { name: "回忆" })).not.toBeInTheDocument();
   });
 
+  it("keeps the journal editor focused on the essential fields", async () => {
+    render(<JournalWorkspace />);
+    await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
+
+    await userEvent.click(screen.getByRole("button", { name: "写一篇" }));
+
+    expect(screen.getByRole("dialog", { name: "写一篇" })).toBeInTheDocument();
+    expect(screen.getByText("标题")).toBeInTheDocument();
+    expect(screen.getByText("日期")).toBeInTheDocument();
+    expect(screen.getByText("正文")).toBeInTheDocument();
+    expect(screen.queryByText("评分")).not.toBeInTheDocument();
+    expect(screen.queryByText("分类")).not.toBeInTheDocument();
+    expect(screen.queryByText("标签")).not.toBeInTheDocument();
+    expect(screen.queryByText("仅自己可见")).not.toBeInTheDocument();
+  });
+
   it("opens the selected journal in the reader when its stream card is clicked", async () => {
     render(<JournalWorkspace />);
     await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
