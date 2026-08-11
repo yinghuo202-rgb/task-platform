@@ -5,7 +5,6 @@ const links = [
   ["/journal", "手帐"],
   ["/tasks", "清单"],
   ["/notifications", "提醒"],
-  ["/profile", "我们"],
   ["/settings/security", "空间设置"],
 ] as const;
 

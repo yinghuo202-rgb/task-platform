@@ -88,6 +88,7 @@ p { line-height: 1.7; }
 .legacy-route { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .desktop-nav a:hover, .account-nav > a:not(.button):hover, .link-button:hover { color: var(--brand); }
 .account-nav { justify-content: flex-end; }
+.account-name { color: var(--muted); }
 .account-nav .icon-link { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid #f3d7e5; border-radius: 13px; color: var(--brand); background: var(--brand-soft); }
 .link-button { border: 0; background: none; color: inherit; cursor: pointer; padding: 8px 0; }
 .mobile-nav { display: none; }
@@ -726,7 +727,7 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
   .brand { font-size: .93rem; }
   .brand-mark { width: 32px; height: 32px; border-radius: 9px; }
   .brand-copy small { display: none; }
-  .mobile-nav { position: fixed; z-index: 40; left: 8px; right: 8px; bottom: 8px; display: grid; grid-template-columns: repeat(5, 1fr); height: 68px; padding: 6px 4px max(6px, env(safe-area-inset-bottom)); border: 1px solid rgb(215 219 228 / 90%); border-radius: 18px; background: rgb(255 255 255 / 94%); box-shadow: 0 12px 32px rgb(24 32 51 / 16%); backdrop-filter: blur(18px); }
+  .mobile-nav { position: fixed; z-index: 40; left: 8px; right: 8px; bottom: 8px; display: grid; grid-template-columns: repeat(4, 1fr); height: 68px; padding: 6px 4px max(6px, env(safe-area-inset-bottom)); border: 1px solid rgb(215 219 228 / 90%); border-radius: 18px; background: rgb(255 255 255 / 94%); box-shadow: 0 12px 32px rgb(24 32 51 / 16%); backdrop-filter: blur(18px); }
   .mobile-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #5e6679; font-size: .64rem; font-weight: 650; }
   .mobile-nav svg { width: 20px; height: 20px; }
   .mobile-nav .mobile-primary { width: 52px; height: 52px; margin: -15px auto 0; border-radius: 16px; color: white; background: var(--brand); box-shadow: 0 9px 23px rgb(49 87 246 / 30%); }

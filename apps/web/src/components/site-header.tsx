@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Heart, House, LogIn, PenLine, Sparkles, Users } from "lucide-react";
+import { Bell, Heart, House, LogIn, PenLine, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export function SiteHeader() {
@@ -13,12 +13,11 @@ export function SiteHeader() {
         {user && <Link href="/dashboard">日历</Link>}
         {user && <Link href="/journal">手帐</Link>}
         {user && <Link href="/tasks">清单</Link>}
-        {user && <Link href="/profile">我们</Link>}
         {user?.role === "ADMIN" && <Link href="/admin/users">空间设置</Link>}
       </nav>
       <div className="account-nav">
         {!loading && (user
-          ? <><Link className="icon-link" aria-label="消息" href="/notifications"><Bell size={18} /></Link><Link href="/profile">{user.displayName}</Link><button className="link-button" onClick={() => void logout()}>退出登录</button></>
+          ? <><Link className="icon-link" aria-label="消息" href="/notifications"><Bell size={18} /></Link><span className="account-name">{user.displayName}</span><button className="link-button" onClick={() => void logout()}>退出登录</button></>
           : <><Link href="/login">登录</Link><Link className="button small" href="/register">凭邀请码加入</Link></>)}
       </div>
     </header>
@@ -27,7 +26,6 @@ export function SiteHeader() {
       <Link href={user ? "/journal" : "/login"}><PenLine /><span>手帐</span></Link>
       {user ? <Link className="mobile-primary" href="/tasks"><Sparkles /><span>大厅</span></Link> : <Link className="mobile-primary" href="/login"><LogIn /><span>登录</span></Link>}
       <Link href={user ? "/notifications" : "/login"}><Bell /><span>提醒</span></Link>
-      <Link href={user ? "/profile" : "/login"}><Users /><span>我们</span></Link>
     </nav>
   </>;
 }

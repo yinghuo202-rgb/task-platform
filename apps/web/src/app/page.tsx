@@ -22,7 +22,7 @@ export default function Home() {
         <div className="hero-panel-head"><div><strong>今天，也留一点位置</strong><p>日程、手帐和想一起做的事情。</p></div><span className="badge">私密空间</span></div>
         <div className="hero-brief"><span className="brief-icon yellow"><CalendarDays size={17} /></span><div><strong>日历</strong><p>拖动安排时间，月、周、日都能看。</p></div></div>
         <div className="hero-brief"><span className="brief-icon mint"><PenLine size={17} /></span><div><strong>手帐</strong><p>写下今天，之后可以从历史时间轴找回来。</p></div></div>
-        <div className="hero-brief"><span className="brief-icon pink"><Heart size={17} /></span><div><strong>我们</strong><p>只在两个人之间共享，不公开发布。</p></div></div>
+        <div className="hero-brief"><span className="brief-icon pink"><Heart size={17} /></span><div><strong>私密</strong><p>只在两个人之间共享，不公开发布。</p></div></div>
         <div className="hero-panel-note"><Check size={15} /> 内容在线保存，NAS 负责备份。</div>
       </aside>
     </div></div></section>
