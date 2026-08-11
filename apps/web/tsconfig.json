@@ -14,5 +14,5 @@
     "exactOptionalPropertyTypes": false
   },
   "include": ["next-env.d.ts", "*.ts", "src/**/*.ts", "src/**/*.tsx", "e2e/**/*.ts", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", ".next/types/**/* 2.ts"]
+  "exclude": ["node_modules", ".next/types/**/* *.ts"]
 }

@@ -2,8 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- journal images are authenticated same-origin assets with imported dimensions */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { BookOpen, CalendarDays, FileDown, FileText, MessageCircle, PenLine, Plus, Send, Sparkles, Star, Trash2, X } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, FileDown, FileText, MessageCircle, PenLine, Plus, Send, Sparkles, Star, Trash2, X } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Button, Field, Input, Textarea } from "./ui";
 
@@ -27,7 +26,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const [activeIndex, setActiveIndex] = useState(0);
   const [selected, setSelected] = useState<Entry | null>(null);
   const [filter, setFilter] = useState<FilterKind>("ALL");
-  const [view, setView] = useState<"stream" | "reader" | "memory">("stream");
+  const [view, setView] = useState<"stream" | "reader">("stream");
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
@@ -52,6 +51,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const filteredRecords = useMemo(() => filter === "ALL" ? records : records.filter((record) => record.type === filter), [filter, records]);
   const currentRecord = filteredRecords[activeIndex] ?? filteredRecords[0] ?? null;
   const currentRecordId = currentRecord?.id;
+  const currentEntry = selected?.id === currentRecordId ? selected : null;
 
   useEffect(() => {
     currentRecordIdRef.current = currentRecordId;
@@ -78,14 +78,21 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     entryAbortRef.current?.abort();
     const controller = new AbortController();
     entryAbortRef.current = controller;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 12_000);
+    setError("");
     setDetailLoading(true);
     try {
       const response = await apiFetch<Entry>(`/entries/${id}`, { signal: controller.signal });
       if (requestId === entryRequestRef.current && currentRecordIdRef.current === id) setSelected(response.data);
     } catch (err) {
-      if (err instanceof Error && err.name === "AbortError") return;
-      if (requestId === entryRequestRef.current) setError(err instanceof ApiError ? err.message : "手帐内容加载失败");
+      if (err instanceof Error && err.name === "AbortError" && !timedOut) return;
+      if (requestId === entryRequestRef.current) setError(err instanceof ApiError ? err.message : "手帐内容加载超时，请重试");
     } finally {
+      clearTimeout(timeout);
       if (requestId === entryRequestRef.current) setDetailLoading(false);
     }
   }, []);
@@ -132,7 +139,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     detailTimerRef.current = setTimeout(() => {
       void loadEntry(id);
       void loadComments(id);
-    }, 260);
+    }, 180);
     return () => {
       if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
     };
@@ -143,7 +150,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     if (!rail || !filteredRecords.length || userScrolledRef.current) return;
     const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
     const top = filteredRecords.length <= 1 ? 0 : (activeIndex / (filteredRecords.length - 1)) * maxScroll;
-    rail.scrollTo({ top, behavior: "auto" });
+    rail.scrollTop = top;
   }, [activeIndex, filteredRecords.length]);
 
   const selectIndex = (index: number) => {
@@ -155,7 +162,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     if (rail) {
       const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
       const top = filteredRecords.length <= 1 ? 0 : (nextIndex / (filteredRecords.length - 1)) * maxScroll;
-      rail.scrollTo({ top, behavior: "auto" });
+      rail.scrollTop = top;
     }
   };
 
@@ -304,21 +311,20 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       <div><span className="eyebrow">LA VIE · OUR NOTES</span><h1>我们的手帐</h1><p>把普通的日子，慢慢收进来。</p></div>
       <div className="journal-header-actions"><Button className="secondary" onClick={() => openEditor()}><PenLine size={16} />写一篇</Button>{canImport && <Button className="ghost small journal-import-button" disabled={importing} onClick={() => void importEntries()}><FileDown size={14} />{importing ? "导入中…" : "导入旧 Markdown"}</Button>}</div>
     </header>
-    <div className="journal-toolbar"><div className="journal-view-tabs" role="tablist" aria-label="手帐视图">{([ ["stream", "时光流"], ["reader", "翻页看"], ["memory", "回忆"] ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>{label}</button>)}</div><div className="journal-filters">{([ ["ALL", "全部"], ["JOURNAL", "手帐"], ["REVIEW", "点评"] ] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={filter === key} className={filter === key ? "active" : ""} onClick={() => setFilterAndReset(key)}>{label}</button>)}</div></div>
+    <div className="journal-toolbar"><div className="journal-view-tabs" role="tablist" aria-label="手帐视图">{([ ["stream", "时光流"], ["reader", "翻页看"] ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>{label}</button>)}</div><div className="journal-filters">{([ ["ALL", "全部"], ["JOURNAL", "手帐"], ["REVIEW", "点评"] ] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={filter === key} className={filter === key ? "active" : ""} onClick={() => setFilterAndReset(key)}>{label}</button>)}</div></div>
     {error && <div className="form-message" role="alert">{error}</div>}
     {notice && <div className="form-message success" role="status">{notice}</div>}
-    {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : <>
-      {view === "stream" && <StreamView records={filteredRecords} activeIndex={activeIndex} current={selected} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onEdit={() => selected && openEditor(selected)} />}
-      {view === "reader" && <ReaderView entry={selected} loading={detailLoading} onEdit={() => selected && openEditor(selected)} />}
-      {view === "memory" && <MemoryView records={records} />}
-      {view !== "memory" && selected && <JournalConversation entry={selected} comments={comments} loading={commentsLoading} value={commentText} saving={commentSaving} onChange={setCommentText} onSubmit={submitComment} onRemove={(id) => void removeComment(id)} />}
+    {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : !filteredRecords.length ? <div className="empty"><BookOpen size={30} /><h2>没有这类记录</h2><p>换一个筛选条件，或写下第一篇。</p></div> : <>
+      {view === "stream" && <StreamView records={filteredRecords} activeIndex={activeIndex} current={currentEntry} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} />}
+      {view === "reader" && <ReaderView activeIndex={activeIndex} count={filteredRecords.length} entry={currentEntry} loading={detailLoading} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} />}
+      {currentEntry && <JournalConversation entry={currentEntry} comments={comments} loading={commentsLoading} value={commentText} saving={commentSaving} onChange={setCommentText} onSubmit={submitComment} onRemove={(id) => void removeComment(id)} />}
     </>}
     {editor && <EntryEditor editor={editor} saving={saving} onChange={setEditor} onClose={() => setEditor(null)} onDelete={() => void removeEntry()} onSubmit={saveEntry} />}
   </div></section>;
 }
 
-function StreamView({ records, activeIndex, current, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onEdit }: {
-  records: EntryIndex[]; activeIndex: number; current: Entry | null; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onEdit: () => void;
+function StreamView({ records, activeIndex, current, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onRetry, onEdit }: {
+  records: EntryIndex[]; activeIndex: number; current: Entry | null; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: () => void;
 }) {
   const currentRecord = records[activeIndex];
   const windowStart = Math.max(0, Math.min(records.length - JOURNAL_TICK_WINDOW, activeIndex - Math.floor(JOURNAL_TICK_WINDOW / 2)));
@@ -327,7 +333,7 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
     <div className="journal-stream-meta"><strong>{currentRecord ? formatDate(currentRecord.entryDate) : "选择一天"}</strong><span>{activeIndex + 1} / {records.length} 条记录</span></div>
     <article className={`journal-entry-card${current?.type === "REVIEW" ? " review" : ""}`}>
       <span className="journal-liquid-orb orb-one" aria-hidden="true" /><span className="journal-liquid-orb orb-two" aria-hidden="true" />
-      {detailLoading || !current ? <div className="journal-entry-loading">正在打开这一页…</div> : <>
+      {!current ? <div className="journal-entry-loading" aria-live="polite">{detailLoading ? "正在打开这一页…" : <button type="button" onClick={onRetry}>这一页暂时没有打开，点击重试</button>}</div> : <>
         <div className="journal-entry-copy">
           <div className="journal-entry-meta"><span className="journal-kind"><span>{current.type === "REVIEW" ? "★" : "▧"}</span>{current.type === "REVIEW" ? "点评" : "手帐"}</span><span>{current.createdBy.displayName}</span><span>{current.visibility === "PUBLIC" ? "两个人可见" : "仅自己"}</span>{current.importedPath && <span className="journal-imported"><FileText size={12} />由 Markdown 迁入</span>}{current.rating != null && <span className="journal-rating">{stars(current.rating)}</span>}</div>
           <h2>{current.title}</h2><MarkdownPreview value={current.contentMarkdown} compact />
@@ -350,20 +356,61 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
   </div>;
 }
 
-function ReaderView({ entry, loading, onEdit }: { entry: Entry | null; loading: boolean; onEdit: () => void }) {
-  if (loading || !entry) return <div className="loading">正在打开这一页…</div>;
-  return <article className={`journal-reader${entry.type === "REVIEW" ? " review" : ""}`}><span className="journal-liquid-orb orb-one" aria-hidden="true" /><aside><small>{entry.type === "REVIEW" ? "REVIEW" : "JOURNAL"}</small><strong>{shortDate(entry.entryDate)}</strong><span>{formatDate(entry.entryDate)}</span><span>{entry.createdBy.displayName}</span>{entry.rating != null && <b>{stars(entry.rating)}</b>}</aside><div className="journal-reader-body"><div className="journal-reader-actions"><div><span>{entry.category || "日常"}</span>{entry.importedPath && <em><FileText size={12} />Markdown 迁入</em>}</div><Button className="ghost small" onClick={onEdit}><PenLine size={14} />编辑</Button></div><h2>{entry.title}</h2><MarkdownPreview value={entry.contentMarkdown} /><div className="journal-tags">{entry.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div></article>;
-}
-
-function MemoryView({ records }: { records: EntryIndex[] }) {
-  const monthCounts = records.reduce<Record<string, number>>((result, record) => { const key = record.entryDate.slice(0, 7); result[key] = (result[key] ?? 0) + 1; return result; }, {});
-  const reviewCount = records.filter((record) => record.type === "REVIEW").length;
-  const journalCount = records.length - reviewCount;
-  const months = Object.entries(monthCounts).slice(0, 12);
-  const today = new Date();
-  const todaySuffix = `-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const sameDayMemories = records.filter((record) => record.entryDate.slice(0, 10).endsWith(todaySuffix) && Number(record.entryDate.slice(0, 4)) < today.getFullYear()).slice(0, 3);
-  return <div className="journal-memory"><section className="journal-memory-panel"><div className="journal-memory-heading"><div><span className="eyebrow">ALL THE LITTLE DAYS</span><h2>留下来的日子</h2></div><Sparkles size={22} /></div><div className="journal-memory-grid">{months.length ? months.map(([month, count]) => <div className="journal-month-stat" key={month}><span>{month.replace("-", " 年 ")} 月</span><strong>{count}</strong><small>条记录</small><i style={{ height: `${Math.max(18, Math.min(100, count * 14))}%` }} /></div>) : <p className="muted">写下第一篇后，这里会出现时间分布。</p>}</div></section><section className="journal-memory-panel journal-memory-summary"><h2>记录构成</h2><div><BookOpen size={18} /><span>手帐</span><strong>{journalCount}</strong></div><div><Star size={18} /><span>点评</span><strong>{reviewCount}</strong></div><p>回忆页只做内容聚合，不会增加额外的记录流程。</p></section><section className="journal-memory-today"><CalendarDays size={20} /><div><strong>往年的今天</strong>{sameDayMemories.length ? <nav>{sameDayMemories.map((record) => <Link href={`/journal?entry=${record.id}`} key={record.id}><span>{record.entryDate.slice(0, 4)}</span>{record.title}</Link>)}</nav> : <p>这一天还没有旧记录。今天写下的内容，明年会在这里重逢。</p>}</div></section></div>;
+function ReaderView({ activeIndex, count, entry, loading, onSelect, onRetry, onEdit }: { activeIndex: number; count: number; entry: Entry | null; loading: boolean; onSelect: (index: number) => void; onRetry: () => void; onEdit: () => void }) {
+  const gestureRef = useRef<{ x: number; y: number } | null>(null);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const go = (delta: number) => {
+    const target = activeIndex + delta;
+    if (target < 0 || target >= count) return;
+    setDragX(0);
+    setDragging(false);
+    onSelect(target);
+  };
+  const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if (event.button !== 0 || (event.target as HTMLElement).closest("button, a, input, textarea")) return;
+    gestureRef.current = { x: event.clientX, y: event.clientY };
+    setDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onPointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    const start = gestureRef.current;
+    if (!start || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const x = event.clientX - start.x;
+    const y = event.clientY - start.y;
+    if (Math.abs(x) > Math.abs(y)) setDragX(Math.max(-110, Math.min(110, x)));
+  };
+  const finishGesture = (event: React.PointerEvent<HTMLElement>) => {
+    const start = gestureRef.current;
+    gestureRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    const distance = start ? event.clientX - start.x : 0;
+    if (Math.abs(distance) >= 56) go(distance < 0 ? 1 : -1);
+    else { setDragX(0); setDragging(false); }
+  };
+  const cancelGesture = () => {
+    gestureRef.current = null;
+    setDragX(0);
+    setDragging(false);
+  };
+  return <div className="journal-reader-shell">
+    <article
+      aria-label="手帐正文，左右滑动切换上下篇"
+      className={`journal-reader${entry?.type === "REVIEW" ? " review" : ""}${dragging ? " dragging" : ""}`}
+      onKeyDown={(event) => { if (event.key === "ArrowLeft") { event.preventDefault(); go(-1); } if (event.key === "ArrowRight") { event.preventDefault(); go(1); } }}
+      onPointerCancel={cancelGesture}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={finishGesture}
+      style={{ transform: `translate3d(${dragX}px, 0, 0)`, opacity: dragging ? Math.max(.72, 1 - Math.abs(dragX) / 400) : 1 }}
+      tabIndex={0}
+    >
+      {!entry ? <div className="journal-reader-loading" aria-live="polite">{loading ? "正在打开这一页…" : <button type="button" onClick={onRetry}>这一页暂时没有打开，点击重试</button>}</div> : <>
+        <span className="journal-liquid-orb orb-one" aria-hidden="true" /><aside><small>{entry.type === "REVIEW" ? "REVIEW" : "JOURNAL"}</small><strong>{shortDate(entry.entryDate)}</strong><span>{formatDate(entry.entryDate)}</span><span>{entry.createdBy.displayName}</span>{entry.rating != null && <b>{stars(entry.rating)}</b>}</aside><div className="journal-reader-body"><div className="journal-reader-actions"><div><span>{entry.category || "日常"}</span>{entry.importedPath && <em><FileText size={12} />Markdown 迁入</em>}</div><Button className="ghost small" onClick={onEdit}><PenLine size={14} />编辑</Button></div><h2>{entry.title}</h2><MarkdownPreview value={entry.contentMarkdown} /><div className="journal-tags">{entry.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div>
+      </>}
+    </article>
+    <nav className="journal-reader-pagination" aria-label="手帐翻页"><button type="button" disabled={activeIndex === 0} onClick={() => go(-1)}><ChevronLeft size={16} />上一篇</button><span>{activeIndex + 1} / {count}<small>左右滑动切换</small></span><button type="button" disabled={activeIndex >= count - 1} onClick={() => go(1)}>下一篇<ChevronRight size={16} /></button></nav>
+  </div>;
 }
 
 function JournalConversation({ entry, comments, loading, value, saving, onChange, onSubmit, onRemove }: { entry: Entry; comments: EntryComment[]; loading: boolean; value: string; saving: boolean; onChange: (value: string) => void; onSubmit: (event: React.FormEvent) => void; onRemove: (id: string) => void }) {
