@@ -14,7 +14,7 @@ export class SecurityMiddleware implements NestMiddleware {
     if (SAFE_METHODS.has(req.method)) return next();
 
     const origin = req.header("origin");
-    if (origin && !this.allowedOrigins(req).has(origin)) {
+    if (origin && !this.allowedOrigins(req).has(origin) && !this.isLoopbackOrigin(origin)) {
       throw new ForbiddenException({ code: "INVALID_ORIGIN", message: "请求来源不受信任" });
     }
 
@@ -48,5 +48,15 @@ export class SecurityMiddleware implements NestMiddleware {
       origins.add(`https://${host}`);
     }
     return origins;
+  }
+
+  private isLoopbackOrigin(origin: string): boolean {
+    try {
+      const url = new URL(origin);
+      return (url.protocol === "http:" || url.protocol === "https:")
+        && (url.hostname === "127.0.0.1" || url.hostname === "localhost");
+    } catch {
+      return false;
+    }
   }
 }
