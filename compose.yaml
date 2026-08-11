@@ -56,6 +56,17 @@ services:
       timeout: 5s
       retries: 10
 
+  api-storage-init:
+    # Bind-mounted NAS folders are commonly created as root-owned 0755.
+    # Prepare the writable upload tree before the non-root API starts.
+    image: "busybox:1.36"
+    platform: "${APP_PLATFORM:-linux/amd64}"
+    pull_policy: "${IMAGE_PULL_POLICY:-missing}"
+    restart: "no"
+    command: ["sh", "-c", "mkdir -p /data/uploads/journal && (chown -R 10001:10001 /data/uploads || chmod -R a+rwX /data/uploads)"]
+    volumes:
+      - "${UPLOAD_DATA_PATH:-./data/uploads}:/data/uploads"
+
   api:
     image: "${API_IMAGE:-task-platform-api:1.0.0}"
     platform: "${APP_PLATFORM:-linux/amd64}"
@@ -87,6 +98,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      api-storage-init:
+        condition: service_completed_successfully
     networks: [frontend, backend]
     read_only: true
     tmpfs:

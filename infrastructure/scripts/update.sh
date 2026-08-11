@@ -16,10 +16,10 @@ printf '2/5 Back up database and files\n'
 "$project_dir/infrastructure/scripts/backup.sh"
 
 printf '3/5 Pull linux/amd64 application images\n'
-docker compose pull reverse-proxy web api
+docker compose pull reverse-proxy web api api-storage-init
 
 printf '4/5 Recreate application containers\n'
-docker compose up -d --remove-orphans reverse-proxy web api db
+docker compose up -d --remove-orphans reverse-proxy web api api-storage-init db
 
 printf '5/5 Wait for application health\n'
 attempt=0
@@ -38,7 +38,7 @@ docker compose logs --tail=120 reverse-proxy web api >&2
 if [ -f .env.last-successful ]; then
   cp .env ".env.failed-$stamp"
   cp .env.last-successful .env
-  docker compose up -d --remove-orphans reverse-proxy web api db
+  docker compose up -d --remove-orphans reverse-proxy web api api-storage-init db
   printf 'Previous successful configuration restored. Failed configuration: .env.failed-%s\n' "$stamp" >&2
 fi
 exit 1
