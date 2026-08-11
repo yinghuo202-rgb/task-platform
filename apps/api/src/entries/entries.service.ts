@@ -300,21 +300,42 @@ export class EntriesService {
       entry.authorUsername,
       ...entry.comments.map((comment) => comment.authorUsername),
     ]))];
+    // Older migration packages used the display name (for example `Cristina`)
+    // instead of the current login username (`Cristina_zl`). Resolve both
+    // forms case-insensitively so those packages remain importable.
     const users = await this.prisma.user.findMany({
-      where: { username: { in: usernames } },
-      select: { id: true, username: true, role: true, status: true },
+      where: {
+        OR: [
+          ...usernames.map((name) => ({ username: { equals: name, mode: "insensitive" as const } })),
+          ...usernames.map((name) => ({ displayName: { equals: name, mode: "insensitive" as const } })),
+        ],
+      },
+      select: { id: true, username: true, displayName: true, role: true, status: true },
     });
-    const usersByName = new Map(users.map((account) => [account.username, account]));
-    const missingUsers = usernames.filter((username) => !usersByName.has(username));
+    const usersByUsername = new Map(users.map((account) => [account.username.trim().toLowerCase(), account]));
+    const usersByDisplayName = new Map<string, (typeof users)[number]>();
+    for (const account of users) {
+      const displayName = account.displayName?.trim().toLowerCase();
+      if (displayName && !usersByDisplayName.has(displayName)) usersByDisplayName.set(displayName, account);
+    }
+    const resolveAuthor = (reference: string) => {
+      const normalized = reference.trim().toLowerCase();
+      return usersByUsername.get(normalized) ?? usersByDisplayName.get(normalized);
+    };
+    const missingUsers = usernames.filter((username) => !resolveAuthor(username));
     if (missingUsers.length) throw new BadRequestException(`找不到迁移作者账号：${missingUsers.join("、")}`);
-    const inactiveUsers = users.filter((account) => account.status !== "ACTIVE");
+    const referencedUsers = [...new Map(usernames.map((username) => {
+      const account = resolveAuthor(username)!;
+      return [account.id, account] as const;
+    })).values()];
+    const inactiveUsers = referencedUsers.filter((account) => account.status !== "ACTIVE");
     if (inactiveUsers.length) throw new BadRequestException(`迁移作者账号已停用：${inactiveUsers.map((account) => account.username).join("、")}`);
     const memberships = await this.prisma.projectMember.findMany({
-      where: { projectId, userId: { in: users.filter((account) => account.role !== "ADMIN").map((account) => account.id) } },
+      where: { projectId, userId: { in: referencedUsers.filter((account) => account.role !== "ADMIN").map((account) => account.id) } },
       select: { userId: true },
     });
     const memberIds = new Set(memberships.map((membership) => membership.userId));
-    const usersOutsideProject = users.filter((account) => account.role !== "ADMIN" && !memberIds.has(account.id));
+    const usersOutsideProject = referencedUsers.filter((account) => account.role !== "ADMIN" && !memberIds.has(account.id));
     if (usersOutsideProject.length) {
       throw new BadRequestException(`请先把这些账号加入 la vie：${usersOutsideProject.map((account) => account.username).join("、")}`);
     }
@@ -339,7 +360,7 @@ export class EntriesService {
     let comments = 0;
     for (const item of prepared) {
       if (item.existing) { skipped += 1; continue; }
-      const author = usersByName.get(item.entry.authorUsername)!;
+      const author = resolveAuthor(item.entry.authorUsername)!;
       const entryDate = this.dateOnly(item.entry.date);
       const createdAt = new Date(`${item.entry.date}T12:00:00+08:00`);
       await this.prisma.$transaction(async (tx) => {
@@ -367,7 +388,7 @@ export class EntriesService {
           await tx.entryComment.createMany({
             data: item.entry.comments.map((comment, index) => ({
               entryId: created.id,
-              authorId: usersByName.get(comment.authorUsername)!.id,
+              authorId: resolveAuthor(comment.authorUsername)!.id,
               content: comment.content,
               createdAt: new Date(createdAt.getTime() + (index + 1) * 60_000),
             })),
