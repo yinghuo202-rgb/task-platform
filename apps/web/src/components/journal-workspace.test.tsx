@@ -40,15 +40,18 @@ describe("JournalWorkspace", () => {
     expect(screen.getByRole("tab", { name: "时光流" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "翻页看" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "回忆" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "全部" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "手帐" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "点评" })).not.toBeInTheDocument();
   });
 
   it("keeps the journal editor focused on the essential fields", async () => {
     render(<JournalWorkspace />);
     await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
 
-    await userEvent.click(screen.getByRole("button", { name: "写一篇" }));
+    await userEvent.click(screen.getByRole("button", { name: "写手帐" }));
 
-    expect(screen.getByRole("dialog", { name: "写一篇" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "写手帐" })).toBeInTheDocument();
     expect(screen.getByText("标题")).toBeInTheDocument();
     expect(screen.getByText("日期")).toBeInTheDocument();
     expect(screen.getByText("正文")).toBeInTheDocument();

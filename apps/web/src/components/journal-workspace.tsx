@@ -1,13 +1,12 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- journal images are authenticated same-origin assets with imported dimensions */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, ChevronLeft, ChevronRight, FileDown, FileText, MessageCircle, PenLine, Plus, Send, Star, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BookOpen, ChevronLeft, ChevronRight, FileDown, FileText, MessageCircle, PenLine, Plus, Send, Trash2, X } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Button, Field, Input, Textarea } from "./ui";
 
 type EntryKind = "JOURNAL" | "REVIEW";
-type FilterKind = "ALL" | EntryKind;
 type EntryAuthor = { id: string; displayName: string; username: string; avatarPath?: string | null };
 type EntryIndex = { id: string; type: EntryKind; title: string; entryDate: string; rating: number | string | null; updatedAt: string; createdBy: EntryAuthor; _count?: { versions: number; comments: number } };
 type EntryIndexResponse = { records: EntryIndex[]; total: number; canImport: boolean };
@@ -26,7 +25,6 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const [canImport, setCanImport] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selected, setSelected] = useState<Entry | null>(null);
-  const [filter, setFilter] = useState<FilterKind>("ALL");
   const [view, setView] = useState<"stream" | "reader">("stream");
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -50,8 +48,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const currentRecordIdRef = useRef<string | undefined>(undefined);
   const userScrolledRef = useRef(false);
 
-  const filteredRecords = useMemo(() => filter === "ALL" ? records : records.filter((record) => record.type === filter), [filter, records]);
-  const currentRecord = filteredRecords[activeIndex] ?? filteredRecords[0] ?? null;
+  const currentRecord = records[activeIndex] ?? records[0] ?? null;
   const currentRecordId = currentRecord?.id;
   const currentEntry = selected?.id === currentRecordId ? selected : null;
 
@@ -153,32 +150,32 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
 
   useEffect(() => {
     const rail = railRef.current;
-    if (!rail || !filteredRecords.length || userScrolledRef.current) return;
+    if (!rail || !records.length || userScrolledRef.current) return;
     const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
-    const top = filteredRecords.length <= 1 ? 0 : (activeIndex / (filteredRecords.length - 1)) * maxScroll;
+    const top = records.length <= 1 ? 0 : (activeIndex / (records.length - 1)) * maxScroll;
     rail.scrollTop = top;
-  }, [activeIndex, filteredRecords.length]);
+  }, [activeIndex, records.length]);
 
   const selectIndex = (index: number) => {
-    if (!filteredRecords.length) return;
-    const nextIndex = Math.min(Math.max(index, 0), filteredRecords.length - 1);
+    if (!records.length) return;
+    const nextIndex = Math.min(Math.max(index, 0), records.length - 1);
     setActiveIndex(nextIndex);
     setDetailLoading(true);
     const rail = railRef.current;
     if (rail) {
       const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
-      const top = filteredRecords.length <= 1 ? 0 : (nextIndex / (filteredRecords.length - 1)) * maxScroll;
+      const top = records.length <= 1 ? 0 : (nextIndex / (records.length - 1)) * maxScroll;
       rail.scrollTop = top;
     }
   };
 
   const onRailScroll = () => {
     const rail = railRef.current;
-    if (!rail || !filteredRecords.length) return;
+    if (!rail || !records.length) return;
     userScrolledRef.current = true;
     const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
     const progress = maxScroll === 0 ? 0 : rail.scrollTop / maxScroll;
-    const nextIndex = Math.min(filteredRecords.length - 1, Math.max(0, Math.round(progress * (filteredRecords.length - 1))));
+    const nextIndex = Math.min(records.length - 1, Math.max(0, Math.round(progress * (records.length - 1))));
     if (nextIndex !== activeIndex) {
       setActiveIndex(nextIndex);
       setDetailLoading(true);
@@ -307,23 +304,17 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     }
   };
 
-  const setFilterAndReset = (next: FilterKind) => {
-    userScrolledRef.current = false;
-    setFilter(next);
-    setActiveIndex(0);
-  };
-
   return <section className="section compact"><div className="container journal-page">
     <header className="journal-header">
       <div><span className="eyebrow">LA VIE · OUR NOTES</span><h1>我们的手帐</h1><p>把普通的日子，慢慢收进来。</p></div>
-      <div className="journal-header-actions"><Button className="secondary" onClick={() => openEditor()}><PenLine size={16} />写一篇</Button>{canImport && <Button className="ghost small journal-import-button" disabled={importing} onClick={() => void importEntries()}><FileDown size={14} />{importing ? "导入中…" : "导入旧 Markdown"}</Button>}</div>
+      <div className="journal-header-actions"><Button className="secondary" onClick={() => openEditor()}><PenLine size={16} />写手帐</Button>{canImport && <Button className="ghost small journal-import-button" disabled={importing} onClick={() => void importEntries()}><FileDown size={14} />{importing ? "导入中…" : "导入旧 Markdown"}</Button>}</div>
     </header>
-    <div className="journal-toolbar"><div className="journal-view-tabs" role="tablist" aria-label="手帐视图">{([ ["stream", "时光流"], ["reader", "翻页看"] ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>{label}</button>)}</div><div className="journal-filters">{([ ["ALL", "全部"], ["JOURNAL", "手帐"], ["REVIEW", "点评"] ] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={filter === key} className={filter === key ? "active" : ""} onClick={() => setFilterAndReset(key)}>{label}</button>)}</div></div>
+    <div className="journal-toolbar"><div className="journal-view-tabs" role="tablist" aria-label="手帐视图">{([ ["stream", "时光流"], ["reader", "翻页看"] ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>{label}</button>)}</div></div>
     {error && <div className="form-message" role="alert">{error}</div>}
     {notice && <div className="form-message success" role="status">{notice}</div>}
-    {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : !filteredRecords.length ? <div className="empty"><BookOpen size={30} /><h2>没有这类记录</h2><p>换一个筛选条件，或写下第一篇。</p></div> : <>
-      {view === "stream" && <StreamView records={filteredRecords} activeIndex={activeIndex} current={currentEntry} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onOpenReader={() => setView("reader")} />}
-      {view === "reader" && <ReaderView activeIndex={activeIndex} count={filteredRecords.length} entry={currentEntry} loading={detailLoading} comments={comments} commentsLoading={commentsLoading} commentAnchor={commentAnchor} commentValue={commentText} commentSaving={commentSaving} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onRequestComment={setCommentAnchor} onCancelComment={() => { setCommentAnchor(null); setCommentText(""); }} onCommentChange={setCommentText} onCommentSubmit={submitComment} onRemoveComment={(id) => void removeComment(id)} />}
+    {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : <>
+      {view === "stream" && <StreamView records={records} activeIndex={activeIndex} current={currentEntry} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onOpenReader={() => setView("reader")} />}
+      {view === "reader" && <ReaderView activeIndex={activeIndex} count={records.length} entry={currentEntry} loading={detailLoading} comments={comments} commentsLoading={commentsLoading} commentAnchor={commentAnchor} commentValue={commentText} commentSaving={commentSaving} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onRequestComment={setCommentAnchor} onCancelComment={() => { setCommentAnchor(null); setCommentText(""); }} onCommentChange={setCommentText} onCommentSubmit={submitComment} onRemoveComment={(id) => void removeComment(id)} />}
     </>}
     {editor && <EntryEditor editor={editor} saving={saving} onChange={setEditor} onClose={() => setEditor(null)} onDelete={() => void removeEntry()} onSubmit={saveEntry} />}
   </div></section>;
@@ -342,7 +333,7 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
   return <div className="journal-stream-stage">
     <div className="journal-stream-meta"><strong>{currentRecord ? formatDate(currentRecord.entryDate) : "选择一天"}</strong><span>{activeIndex + 1} / {records.length} 条记录</span></div>
     <article
-      className={`journal-entry-card${current?.type === "REVIEW" ? " review" : ""}`}
+      className="journal-entry-card"
       role={current ? "button" : undefined}
       tabIndex={current ? 0 : undefined}
       aria-label={current ? `打开《${current.title}》的翻页视图` : undefined}
@@ -357,11 +348,11 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
       <span className="journal-liquid-orb orb-one" aria-hidden="true" /><span className="journal-liquid-orb orb-two" aria-hidden="true" />
       {!current ? <div className="journal-entry-loading" aria-live="polite">{detailLoading ? "正在打开这一页…" : <button type="button" onClick={onRetry}>这一页暂时没有打开，点击重试</button>}</div> : <>
         <div className="journal-entry-copy">
-          <div className="journal-entry-meta"><span className="journal-kind"><span>{current.type === "REVIEW" ? "★" : "▧"}</span>{current.type === "REVIEW" ? "点评" : "手帐"}</span><span>{current.createdBy.displayName}</span>{current.importedPath && <span className="journal-imported"><FileText size={12} />由 Markdown 迁入</span>}{current.rating != null && <span className="journal-rating">{stars(current.rating)}</span>}</div>
+          <div className="journal-entry-meta"><span className="journal-kind"><span>▧</span>手帐</span><span>{current.createdBy.displayName}</span>{current.importedPath && <span className="journal-imported"><FileText size={12} />由 Markdown 迁入</span>}</div>
           <h2>{current.title}</h2><MarkdownPreview value={current.contentMarkdown} compact />
           <div className="journal-entry-foot"><span><MessageCircle size={14} />{currentRecord?._count?.comments ?? 0} 条回应</span><span>{current.category || "日常"}</span></div>
         </div>
-        <div className="journal-entry-art" aria-hidden="true"><small>{new Date(current.entryDate).getFullYear()}</small><strong>{shortDate(current.entryDate)}</strong><span>{current.type === "REVIEW" ? "✦" : "☁"}</span></div>
+        <div className="journal-entry-art" aria-hidden="true"><small>{new Date(current.entryDate).getFullYear()}</small><strong>{shortDate(current.entryDate)}</strong><span>☁</span></div>
         <button className="journal-entry-edit" type="button" onClick={onEdit}>编辑</button>
       </>}
     </article>
@@ -370,7 +361,7 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
       <div className="journal-history-line" aria-hidden="true" />
       <div className="journal-history-viewport" ref={railRef} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
         <div className="journal-history-spacer" aria-hidden="true" />
-        <div className="journal-history-items" style={{ height: records.length * JOURNAL_TICK_HEIGHT }}>{visibleRecords.map((record, offset) => { const index = windowStart + offset; return <button key={record.id} type="button" style={{ top: index * JOURNAL_TICK_HEIGHT }} aria-label={`${formatDate(record.entryDate)}，${record.createdBy.displayName}：${record.title}`} className={`journal-history-tick${record.type === "REVIEW" ? " review" : ""}${index === activeIndex ? " active" : ""}`} onClick={() => onSelect(index)}><span>{isMonthStart(record, index, records) ? formatMonth(record.entryDate) : ""}</span><i /></button>; })}</div>
+        <div className="journal-history-items" style={{ height: records.length * JOURNAL_TICK_HEIGHT }}>{visibleRecords.map((record, offset) => { const index = windowStart + offset; return <button key={record.id} type="button" style={{ top: index * JOURNAL_TICK_HEIGHT }} aria-label={`${formatDate(record.entryDate)}，${record.createdBy.displayName}：${record.title}`} className={`journal-history-tick${index === activeIndex ? " active" : ""}`} onClick={() => onSelect(index)}><span>{isMonthStart(record, index, records) ? formatMonth(record.entryDate) : ""}</span><i /></button>; })}</div>
         <div className="journal-history-spacer" aria-hidden="true" />
       </div>
       <span className="journal-history-selection" aria-hidden="true">{currentRecord ? shortDate(currentRecord.entryDate) : "—"}</span>
@@ -462,7 +453,7 @@ function ReaderView({ activeIndex, count, entry, loading, comments, commentsLoad
   return <div className="journal-reader-shell">
     <article
       aria-label="手帐正文，左右滑动切换上下篇"
-      className={`journal-reader${entry?.type === "REVIEW" ? " review" : ""}${dragging ? " dragging" : ""}`}
+      className={`journal-reader${dragging ? " dragging" : ""}`}
       onContextMenu={(event) => {
         const target = event.target as HTMLElement;
         if (target.closest("button, a, input, textarea, [data-inline-comment]")) return;
@@ -484,7 +475,7 @@ function ReaderView({ activeIndex, count, entry, loading, comments, commentsLoad
       tabIndex={0}
     >
       {!entry ? <div className="journal-reader-loading" aria-live="polite">{loading ? "正在打开这一页…" : <button type="button" onClick={onRetry}>这一页暂时没有打开，点击重试</button>}</div> : <>
-        <span className="journal-liquid-orb orb-one" aria-hidden="true" /><aside><small>{entry.type === "REVIEW" ? "REVIEW" : "JOURNAL"}</small><strong>{shortDate(entry.entryDate)}</strong><span>{formatDate(entry.entryDate)}</span><span>{entry.createdBy.displayName}</span>{entry.rating != null && <b>{stars(entry.rating)}</b>}</aside><div className="journal-reader-body"><div className="journal-reader-actions"><div><span>{entry.category || "日常"}</span>{entry.importedPath && <em><FileText size={12} />Markdown 迁入</em>}</div><Button className="ghost small" onClick={onEdit}><PenLine size={14} />编辑</Button></div><h2>{entry.title}</h2><p className="journal-inline-comment-hint"><MessageCircle size={13} />长按正文任意一段添加评论</p><CommentableMarkdown entryId={entry.id} value={entry.contentMarkdown} comments={comments} commentsLoading={commentsLoading} activeAnchor={commentAnchor} commentValue={commentValue} commentSaving={commentSaving} onRequestComment={onRequestComment} onCancelComment={onCancelComment} onCommentChange={onCommentChange} onCommentSubmit={onCommentSubmit} onRemoveComment={onRemoveComment} /><div className="journal-tags">{entry.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div>
+        <span className="journal-liquid-orb orb-one" aria-hidden="true" /><aside><small>JOURNAL</small><strong>{shortDate(entry.entryDate)}</strong><span>{formatDate(entry.entryDate)}</span><span>{entry.createdBy.displayName}</span></aside><div className="journal-reader-body"><div className="journal-reader-actions"><div><span>{entry.category || "日常"}</span>{entry.importedPath && <em><FileText size={12} />Markdown 迁入</em>}</div><Button className="ghost small" onClick={onEdit}><PenLine size={14} />编辑</Button></div><h2>{entry.title}</h2><p className="journal-inline-comment-hint"><MessageCircle size={13} />长按正文任意一段添加评论</p><CommentableMarkdown entryId={entry.id} value={entry.contentMarkdown} comments={comments} commentsLoading={commentsLoading} activeAnchor={commentAnchor} commentValue={commentValue} commentSaving={commentSaving} onRequestComment={onRequestComment} onCancelComment={onCancelComment} onCommentChange={onCommentChange} onCommentSubmit={onCommentSubmit} onRemoveComment={onRemoveComment} /><div className="journal-tags">{entry.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div>
       </>}
     </article>
     <nav className="journal-reader-pagination" aria-label="手帐翻页"><button type="button" disabled={activeIndex === 0} onClick={() => go(-1)}><ChevronLeft size={16} />上一篇</button><span>{activeIndex + 1} / {count}<small>左右滑动切换</small></span><button type="button" disabled={activeIndex >= count - 1} onClick={() => go(1)}>下一篇<ChevronRight size={16} /></button></nav>
@@ -552,7 +543,7 @@ function CommentableMarkdown({ entryId, value, comments, commentsLoading, active
 }
 
 function EntryEditor({ editor, saving, onChange, onClose, onDelete, onSubmit }: { editor: EditorState; saving: boolean; onChange: (value: EditorState) => void; onClose: () => void; onDelete: () => void; onSubmit: (event: React.FormEvent) => void }) {
-  return <div className="journal-editor-backdrop"><section className="journal-editor" role="dialog" aria-modal="true" aria-labelledby="journal-editor-title"><header><div><span className="eyebrow">WRITE IT DOWN</span><h2 id="journal-editor-title">{editor.id ? "编辑记录" : "写一篇"}</h2></div><button type="button" aria-label="关闭" onClick={onClose}><X size={19} /></button></header><form className="form-stack" onSubmit={onSubmit}><div className="journal-editor-type"><button type="button" className={editor.type === "JOURNAL" ? "active" : ""} onClick={() => onChange({ ...editor, type: "JOURNAL" })}><BookOpen size={16} />手帐</button><button type="button" className={editor.type === "REVIEW" ? "active" : ""} onClick={() => onChange({ ...editor, type: "REVIEW" })}><Star size={16} />点评</button></div><Field label="标题" required><Input autoFocus value={editor.title} onChange={(event) => onChange({ ...editor, title: event.target.value })} placeholder="例如：周末一起去散步" maxLength={160} /></Field><Field label="日期" required><Input type="date" value={editor.entryDate} onChange={(event) => onChange({ ...editor, entryDate: event.target.value })} /></Field><Field label="正文"><Textarea className="journal-editor-textarea" value={editor.contentMarkdown} onChange={(event) => onChange({ ...editor, contentMarkdown: event.target.value })} placeholder="写下今天发生的事，也可以直接粘贴 Markdown" maxLength={100000} /></Field><div className="journal-editor-actions">{editor.id && <Button className="danger" disabled={saving} type="button" onClick={onDelete}>移入归档</Button>}<span /><Button className="secondary" type="button" onClick={onClose}>取消</Button><Button disabled={saving} type="submit">{saving ? "保存中…" : "保存"}</Button></div></form></section></div>;
+  return <div className="journal-editor-backdrop"><section className="journal-editor" role="dialog" aria-modal="true" aria-labelledby="journal-editor-title"><header><div><span className="eyebrow">WRITE IT DOWN</span><h2 id="journal-editor-title">{editor.id ? "编辑手帐" : "写手帐"}</h2></div><button type="button" aria-label="关闭" onClick={onClose}><X size={19} /></button></header><form className="form-stack" onSubmit={onSubmit}><Field label="标题" required><Input autoFocus value={editor.title} onChange={(event) => onChange({ ...editor, title: event.target.value })} placeholder="例如：周末一起去散步" maxLength={160} /></Field><Field label="日期" required><Input type="date" value={editor.entryDate} onChange={(event) => onChange({ ...editor, entryDate: event.target.value })} /></Field><Field label="正文"><Textarea className="journal-editor-textarea" value={editor.contentMarkdown} onChange={(event) => onChange({ ...editor, contentMarkdown: event.target.value })} placeholder="写下今天发生的事，也可以直接粘贴 Markdown" maxLength={100000} /></Field><div className="journal-editor-actions">{editor.id && <Button className="danger" disabled={saving} type="button" onClick={onDelete}>移入归档</Button>}<span /><Button className="secondary" type="button" onClick={onClose}>取消</Button><Button disabled={saving} type="submit">{saving ? "保存中…" : "保存"}</Button></div></form></section></div>;
 }
 
 function MarkdownPreview({ value, compact = false }: { value: string; compact?: boolean }) {
@@ -616,7 +607,6 @@ function parseMarkdown(value: string): MarkdownBlock[] {
   return blocks;
 }
 
-function stars(value: number | string) { const number = Number(value); return `${"★".repeat(Math.floor(number))}${number % 1 ? "½" : ""}`; }
 function toDateInput(value: Date) { const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000); return local.toISOString().slice(0, 10); }
 function formatDate(value: string) { return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "long", day: "numeric", weekday: "short" }).format(new Date(value)); }
 function shortDate(value: string) { return new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric" }).format(new Date(value)); }
