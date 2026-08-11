@@ -604,6 +604,7 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .calendar-legend i.order { border-radius: 50%; background: #4e82d8; }
 .calendar-legend i.entry { background: var(--mint); }
 .calendar-week { min-width: 700px; }
+.calendar-week.single-day { min-width: 0; }
 .calendar-week-header { display: grid; grid-template-columns: 54px repeat(7, minmax(0, 1fr)); min-height: 70px; border-bottom: 1px solid #e6e8ee; }
 .calendar-week-header > span { border-right: 1px solid #eceef3; }
 .calendar-week-header button { display: grid; place-items: center; align-content: center; gap: 3px; border: 0; border-right: 1px solid #eceef3; color: #687083; background: white; cursor: pointer; }
@@ -633,6 +634,8 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .calendar-week-event.subscribed { cursor: default; box-shadow: inset 0 0 0 1px rgb(255 118 174 / 12%); }
 .calendar-week-event.personal { touch-action: none; cursor: grab; }
 .calendar-week-event.personal:active { cursor: grabbing; }
+.calendar-week-event.personal.dragging { z-index: 8; opacity: .78; box-shadow: 0 8px 24px rgb(68 58 112 / 22%); transition: none; }
+.calendar-drag-preview { position: absolute; right: 3px; bottom: 2px; padding: 1px 4px; border-radius: 4px; color: white; background: rgb(47 39 77 / 78%); font-size: .52rem; }
 .calendar-week-event strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .calendar-week-event small { opacity: .7; font-size: .55rem; }
 .calendar-dialog-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 20px; background: rgb(31 27 45 / 35%); backdrop-filter: blur(6px); }
@@ -850,11 +853,11 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .journal-drag-hint { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; color: var(--muted); font-size: .78rem; }
 .journal-history-rail { position: absolute; top: 12px; right: -4px; bottom: 0; width: 34px; }
 .journal-history-line { position: absolute; top: 10px; bottom: 10px; left: 15px; width: 2px; border-radius: 999px; background: var(--line); }
-.journal-history-viewport { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; touch-action: pan-y; cursor: grab; }
+.journal-history-viewport { position: absolute; inset: 0 0 0 -10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; touch-action: pan-y; cursor: grab; }
 .journal-history-viewport:active { cursor: grabbing; }
 .journal-history-spacer { height: calc(50% - 12px); min-height: 120px; }
-.journal-history-items { position: relative; display: grid; gap: 0; }
-.journal-history-tick { position: relative; display: flex; align-items: center; justify-content: flex-end; width: 100%; height: 24px; padding: 0; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
+.journal-history-items { position: relative; }
+.journal-history-tick { position: absolute; right: 0; left: 0; display: flex; align-items: center; justify-content: flex-end; width: 100%; height: 24px; padding: 0; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
 .journal-history-tick span { position: absolute; right: 24px; width: max-content; color: var(--muted); font-size: .58rem; pointer-events: none; }
 .journal-history-tick i { display: block; width: 7px; height: 1px; border-radius: 1px; background: var(--green); }
 .journal-history-tick.review i { background: var(--purple); }
@@ -955,6 +958,7 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
   .journal-entry-card { grid-template-columns: 1fr; }
   .journal-entry-art { min-height: 100px; }
   .journal-history-rail { right: -8px; width: 28px; }
+  .journal-history-viewport { left: -16px; }
   .journal-history-tick span { display: none; }
   .journal-reader { grid-template-columns: 1fr; }
   .journal-reader > aside { min-height: 190px; }

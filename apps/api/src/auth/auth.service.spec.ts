@@ -19,11 +19,11 @@ const user = {
   passwordHash: "",
 };
 
-function createHarness(overrides: Record<string, string> = {}) {
+function createHarness(overrides: Record<string, unknown> = {}) {
   const cookie = vi.fn();
   const prisma = {
     user: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
-    authSession: { create: vi.fn(), update: vi.fn() },
+    authSession: { create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   };
   const audit = { record: vi.fn() };
   const config = new ConfigService({
@@ -83,5 +83,26 @@ describe("AuthService", () => {
     expect(harness.prisma.user.findFirst).toHaveBeenCalledWith({
       where: { OR: [{ email: "cristina_zl" }, { username: { equals: "cristina_zl", mode: "insensitive" } }] },
     });
+  });
+
+  it("uses validated HTTPS cookie settings and configured token lifetimes", async () => {
+    const harness = createHarness({
+      COOKIE_SECURE: true,
+      COOKIE_DOMAIN: "tasks.example.test",
+      JWT_ACCESS_EXPIRES_IN: "1h",
+      JWT_REFRESH_EXPIRES_IN: "7d",
+    });
+    harness.prisma.user.findFirst.mockResolvedValue(null);
+    harness.prisma.user.create.mockImplementation(async ({ data }: { data: { passwordHash: string } }) => ({ ...user, passwordHash: data.passwordHash }));
+    harness.prisma.authSession.create.mockResolvedValue({ id: "a17bbfa6-bc5a-4364-ab86-b8e8f87a6862" });
+    harness.prisma.authSession.update.mockResolvedValue({});
+
+    await harness.service.register({ username: user.username, email: user.email, displayName: user.displayName, password: "StrongPass123!" }, harness.req, harness.res);
+
+    expect(harness.cookie).toHaveBeenCalledWith("access_token", expect.any(String), expect.objectContaining({ secure: true, domain: "tasks.example.test", maxAge: 3_600_000 }));
+    expect(harness.cookie).toHaveBeenCalledWith("refresh_token", expect.any(String), expect.objectContaining({ secure: true, domain: "tasks.example.test", maxAge: 604_800_000 }));
+
+    await harness.service.logout("a17bbfa6-bc5a-4364-ab86-b8e8f87a6862", harness.res);
+    expect(harness.res.clearCookie).toHaveBeenCalledWith("access_token", expect.objectContaining({ secure: true, domain: "tasks.example.test" }));
   });
 });

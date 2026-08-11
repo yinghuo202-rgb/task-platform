@@ -126,7 +126,7 @@ export class AuthService {
         userId: user.id,
         refreshTokenHash: placeholder,
         csrfToken,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + durationMs(this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "30d"), 30 * 24 * 60 * 60 * 1000)),
         ...clientInfo(req),
       },
     });
@@ -139,19 +139,26 @@ export class AuthService {
     res: Response,
     existingCsrf?: string,
   ): Promise<void> {
+    const accessMaxAge = durationMs(this.config.get<string>("JWT_ACCESS_EXPIRES_IN", "15m"), 15 * 60 * 1000);
+    const refreshMaxAge = durationMs(this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "30d"), 30 * 24 * 60 * 60 * 1000);
     const access = await this.sign({ sub: user.id, sid: sessionId, role: user.role, type: "access" }, "JWT_ACCESS_SECRET", "JWT_ACCESS_EXPIRES_IN");
     const refresh = await this.sign({ sub: user.id, sid: sessionId, role: user.role, type: "refresh" }, "JWT_REFRESH_SECRET", "JWT_REFRESH_EXPIRES_IN");
     const csrfToken = existingCsrf ?? randomBytes(32).toString("base64url");
     await this.prisma.authSession.update({
       where: { id: sessionId },
-      data: { refreshTokenHash: await argon2.hash(refresh, { type: argon2.argon2id }), csrfToken },
+      data: {
+        refreshTokenHash: await argon2.hash(refresh, { type: argon2.argon2id }),
+        csrfToken,
+        expiresAt: new Date(Date.now() + refreshMaxAge),
+      },
     });
-    const secure = this.config.get<string>("COOKIE_SECURE") === "true";
+    const secureValue = this.config.get<boolean | string>("COOKIE_SECURE", false);
+    const secure = secureValue === true || secureValue === "true";
     const domain = this.config.get<string>("COOKIE_DOMAIN") || undefined;
     const common = { secure, sameSite: "lax" as const, path: "/", domain };
-    res.cookie("access_token", access, { ...common, httpOnly: true, maxAge: 15 * 60 * 1000 });
-    res.cookie("refresh_token", refresh, { ...common, httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000 });
-    res.cookie("csrf_token", csrfToken, { ...common, httpOnly: false, maxAge: 30 * 24 * 60 * 60 * 1000 });
+    res.cookie("access_token", access, { ...common, httpOnly: true, maxAge: accessMaxAge });
+    res.cookie("refresh_token", refresh, { ...common, httpOnly: true, maxAge: refreshMaxAge });
+    res.cookie("csrf_token", csrfToken, { ...common, httpOnly: false, maxAge: refreshMaxAge });
   }
 
   private sign(payload: TokenPayload, secretKey: string, expiresKey: string): Promise<string> {
@@ -163,8 +170,22 @@ export class AuthService {
   }
 
   private clearCookies(res: Response): void {
-    for (const name of ["access_token", "refresh_token", "csrf_token"]) res.clearCookie(name, { path: "/" });
+    const secureValue = this.config.get<boolean | string>("COOKIE_SECURE", false);
+    const secure = secureValue === true || secureValue === "true";
+    const domain = this.config.get<string>("COOKIE_DOMAIN") || undefined;
+    for (const name of ["access_token", "refresh_token", "csrf_token"]) {
+      res.clearCookie(name, { path: "/", sameSite: "lax", secure, domain });
+    }
   }
+}
+
+function durationMs(value: string, fallback: number): number {
+  const match = /^(\d+)([smhd])$/.exec(value.trim());
+  if (!match) return fallback;
+  const amount = Number(match[1]);
+  if (!Number.isSafeInteger(amount) || amount <= 0) return fallback;
+  const multiplier = match[2] === "d" ? 86_400_000 : match[2] === "h" ? 3_600_000 : match[2] === "m" ? 60_000 : 1_000;
+  return amount * multiplier;
 }
 
 function safeEqual(expected: string, actual: string): boolean {

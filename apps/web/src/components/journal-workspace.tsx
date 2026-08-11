@@ -18,6 +18,8 @@ type ImportResult = { imported: number; skipped: number; comments?: number; asse
 type EditorState = { id: string | null; version: number; type: EntryKind; title: string; entryDate: string; rating: string; category: string; tags: string; contentMarkdown: string; visibility: "PUBLIC" | "PRIVATE" };
 
 const emptyEditor = (): EditorState => ({ id: null, version: 1, type: "JOURNAL", title: "", entryDate: toDateInput(new Date()), rating: "", category: "", tags: "", contentMarkdown: "", visibility: "PUBLIC" });
+const JOURNAL_TICK_HEIGHT = 24;
+const JOURNAL_TICK_WINDOW = 160;
 
 export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string } = {}) {
   const [records, setRecords] = useState<EntryIndex[]>([]);
@@ -113,7 +115,19 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   }, []);
   useEffect(() => {
     if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
-    if (!currentRecordId) return;
+    entryRequestRef.current += 1;
+    commentsRequestRef.current += 1;
+    entryAbortRef.current?.abort();
+    commentsAbortRef.current?.abort();
+    if (!currentRecordId) {
+      setSelected(null);
+      setComments([]);
+      setDetailLoading(false);
+      setCommentsLoading(false);
+      return;
+    }
+    setDetailLoading(true);
+    setCommentsLoading(true);
     const id = currentRecordId;
     detailTimerRef.current = setTimeout(() => {
       void loadEntry(id);
@@ -198,7 +212,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       const payload = {
         type: editor.type,
         title: editor.title.trim(),
-        entryDate: new Date(`${editor.entryDate}T00:00:00`).toISOString(),
+        entryDate: editor.entryDate,
         rating: editor.rating ? Number(editor.rating) : null,
         category: editor.category.trim() || null,
         tags: editor.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
@@ -307,6 +321,8 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
   records: EntryIndex[]; activeIndex: number; current: Entry | null; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onEdit: () => void;
 }) {
   const currentRecord = records[activeIndex];
+  const windowStart = Math.max(0, Math.min(records.length - JOURNAL_TICK_WINDOW, activeIndex - Math.floor(JOURNAL_TICK_WINDOW / 2)));
+  const visibleRecords = records.slice(windowStart, windowStart + JOURNAL_TICK_WINDOW);
   return <div className="journal-stream-stage">
     <div className="journal-stream-meta"><strong>{currentRecord ? formatDate(currentRecord.entryDate) : "选择一天"}</strong><span>{activeIndex + 1} / {records.length} 条记录</span></div>
     <article className={`journal-entry-card${current?.type === "REVIEW" ? " review" : ""}`}>
@@ -326,7 +342,7 @@ function StreamView({ records, activeIndex, current, detailLoading, railRef, onS
       <div className="journal-history-line" aria-hidden="true" />
       <div className="journal-history-viewport" ref={railRef} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
         <div className="journal-history-spacer" aria-hidden="true" />
-        <div className="journal-history-items">{records.map((record, index) => <button key={record.id} type="button" aria-label={`${formatDate(record.entryDate)}，${record.createdBy.displayName}：${record.title}`} className={`journal-history-tick${record.type === "REVIEW" ? " review" : ""}${index === activeIndex ? " active" : ""}`} onClick={() => onSelect(index)}><span>{isMonthStart(record, index, records) ? formatMonth(record.entryDate) : ""}</span><i /></button>)}</div>
+        <div className="journal-history-items" style={{ height: records.length * JOURNAL_TICK_HEIGHT }}>{visibleRecords.map((record, offset) => { const index = windowStart + offset; return <button key={record.id} type="button" style={{ top: index * JOURNAL_TICK_HEIGHT }} aria-label={`${formatDate(record.entryDate)}，${record.createdBy.displayName}：${record.title}`} className={`journal-history-tick${record.type === "REVIEW" ? " review" : ""}${index === activeIndex ? " active" : ""}`} onClick={() => onSelect(index)}><span>{isMonthStart(record, index, records) ? formatMonth(record.entryDate) : ""}</span><i /></button>; })}</div>
         <div className="journal-history-spacer" aria-hidden="true" />
       </div>
       <span className="journal-history-selection" aria-hidden="true">{currentRecord ? shortDate(currentRecord.entryDate) : "—"}</span>

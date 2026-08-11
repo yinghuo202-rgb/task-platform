@@ -13,7 +13,7 @@ printf '1/5 Validate Compose configuration\n'
 docker compose config >/dev/null
 
 printf '2/5 Back up database and files\n'
-"$project_dir/infrastructure/scripts/backup.sh"
+BACKUP_STAMP="$stamp" "$project_dir/infrastructure/scripts/backup.sh"
 
 printf '3/5 Pull linux/amd64 application images\n'
 docker compose pull reverse-proxy web api api-storage-init
@@ -40,5 +40,6 @@ if [ -f .env.last-successful ]; then
   cp .env.last-successful .env
   docker compose up -d --remove-orphans reverse-proxy web api api-storage-init db
   printf 'Previous successful configuration restored. Failed configuration: .env.failed-%s\n' "$stamp" >&2
+  printf 'Database migrations are not rolled back automatically. If the previous API remains unhealthy, restore backup %s/%s with infrastructure/scripts/restore.sh.\n' "${BACKUP_DATA_PATH:-$project_dir/data/backups}" "$stamp" >&2
 fi
 exit 1

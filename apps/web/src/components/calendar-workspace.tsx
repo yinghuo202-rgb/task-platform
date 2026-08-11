@@ -48,6 +48,10 @@ export function CalendarWorkspace() {
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [subscriptionBusy, setSubscriptionBusy] = useState("");
 
+  useEffect(() => {
+    if (window.matchMedia("(max-width: 640px)").matches) setView("day");
+  }, []);
+
   const range = useMemo(() => calendarRange(anchor, view), [anchor, view]);
   const load = useCallback(async () => {
     setLoading(true);
@@ -161,18 +165,15 @@ export function CalendarWorkspace() {
   };
 
   const moveEvent = async (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => {
-    const startsAt = new Date(event.startsAt);
-    const endsAt = new Date(event.endsAt);
-    startsAt.setDate(startsAt.getDate() + dayDelta);
-    endsAt.setDate(endsAt.getDate() + dayDelta);
-    startsAt.setMinutes(startsAt.getMinutes() + minuteDelta);
-    endsAt.setMinutes(endsAt.getMinutes() + minuteDelta);
+    const startsAt = shiftCalendarTime(new Date(event.startsAt), dayDelta, minuteDelta);
+    const endsAt = shiftCalendarTime(new Date(event.endsAt), dayDelta, minuteDelta);
     if (startsAt >= endsAt) return;
     setError("");
+    setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() } : item));
     try {
       await apiFetch(`/calendar/events/${event.id}`, { method: "PATCH", body: JSON.stringify({ startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() }) });
-      await load();
     } catch (err) {
+      setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt: event.startsAt, endsAt: event.endsAt } : item));
       setError(err instanceof ApiError ? err.message : "日程移动失败");
     }
   };
@@ -277,8 +278,10 @@ function MonthCalendar({ anchor, items, selectedDate, onSelect, onCreate, onEdit
 }
 
 function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, onEdit, onMove }: { mode: "week" | "day"; anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void }) {
-  const start = mode === "day" ? startOfDay(anchor) : startOfWeek(anchor);
-  const days = Array.from({ length: mode === "day" ? 1 : 7 }, (_, index) => addDays(start, index));
+  const days = useMemo(() => {
+    const start = mode === "day" ? startOfDay(anchor) : startOfWeek(anchor);
+    return Array.from({ length: mode === "day" ? 1 : 7 }, (_, index) => addDays(start, index));
+  }, [anchor, mode]);
   const hours = Array.from({ length: 24 }, (_, index) => index);
   const columnStyle = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` };
   const headerStyle = { gridTemplateColumns: `54px repeat(${days.length}, minmax(0, 1fr))` };
@@ -288,7 +291,7 @@ function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, o
   useEffect(() => {
     const containsToday = days.some(isToday);
     scrollRef.current?.scrollTo({ top: Math.max(0, (containsToday ? currentMinutes : 8 * 60) - 220) });
-  }, [anchor, currentMinutes, days]);
+  }, [currentMinutes, days]);
   return <div className={`calendar-week${mode === "day" ? " single-day" : ""}`}>
     <div className="calendar-week-header" style={headerStyle}><span />{days.map((day) => <button className={`${isToday(day) ? "today" : ""}${isSameDay(day, selectedDate) ? " selected" : ""}`} key={day.toISOString()} onClick={() => onSelect(day)}><small>{weekLabels[(day.getDay() + 6) % 7]}</small><strong>{day.getDate()}</strong></button>)}</div>
     <div className="calendar-week-all-day" style={headerStyle}><span>记录</span>{days.map((day) => <div key={day.toISOString()}>{items.filter((item) => item.allDay && occursOn(item, day)).map((item) => <Link href={`/journal?entry=${item.entry!.id}`} key={item.id}><i style={{ background: item.color }} />{item.title}</Link>)}</div>)}</div>
@@ -317,28 +320,40 @@ function WeekEvent({ item, onEdit, onMove }: { item: CalendarItem; onEdit: (even
 
 function DraggableWeekEvent({ item, onEdit, onMove, style, children }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; style: CSSProperties; children: ReactNode }) {
   const pointer = useRef<{ x: number; y: number; moved: boolean }>({ x: 0, y: 0, moved: false });
+  const [preview, setPreview] = useState<{ dayDelta: number; minuteDelta: number; columnWidth: number } | null>(null);
+  const dragDelta = (event: PointerEvent<HTMLButtonElement>) => {
+    const column = event.currentTarget.closest<HTMLElement>(".calendar-week-day");
+    const columns = column?.parentElement;
+    if (!column || !columns) return null;
+    const currentIndex = Array.from(columns.children).indexOf(column);
+    const rect = columns.getBoundingClientRect();
+    const columnWidth = rect.width / columns.children.length;
+    const nextIndex = Math.max(0, Math.min(columns.children.length - 1, Math.floor((event.clientX - rect.left) / columnWidth)));
+    return { dayDelta: nextIndex - currentIndex, minuteDelta: Math.round((event.clientY - pointer.current.y) / 15) * 15, columnWidth };
+  };
   const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     pointer.current = { x: event.clientX, y: event.clientY, moved: false };
+    setPreview(null);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
   const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
     if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
-    if (Math.abs(event.clientX - pointer.current.x) > 4 || Math.abs(event.clientY - pointer.current.y) > 4) pointer.current.moved = true;
+    if (Math.abs(event.clientX - pointer.current.x) > 4 || Math.abs(event.clientY - pointer.current.y) > 4) {
+      pointer.current.moved = true;
+      setPreview(dragDelta(event));
+    }
   };
   const handlePointerUp = (event: PointerEvent<HTMLButtonElement>) => {
     if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
     event.currentTarget.releasePointerCapture(event.pointerId);
     if (!pointer.current.moved) { onEdit(item.event!); return; }
-    const column = event.currentTarget.closest<HTMLElement>(".calendar-week-day");
-    const columns = column?.parentElement;
-    if (!column || !columns) return;
-    const currentIndex = Array.from(columns.children).indexOf(column);
-    const rect = columns.getBoundingClientRect();
-    const nextIndex = Math.max(0, Math.min(columns.children.length - 1, Math.floor((event.clientX - rect.left) / (rect.width / columns.children.length))));
-    const minuteDelta = Math.round((event.clientY - pointer.current.y) / 15) * 15;
-    onMove(item.event!, nextIndex - currentIndex, minuteDelta);
+    const delta = dragDelta(event);
+    setPreview(null);
+    if (delta && (delta.dayDelta || delta.minuteDelta)) onMove(item.event!, delta.dayDelta, delta.minuteDelta);
   };
-  return <button className="calendar-week-event personal" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} style={style}>{children}</button>;
+  const previewStart = preview ? shiftCalendarTime(new Date(item.event!.startsAt), preview.dayDelta, preview.minuteDelta) : null;
+  const previewStyle = preview ? { transform: `translate(${preview.dayDelta * preview.columnWidth}px, ${preview.minuteDelta}px)` } : {};
+  return <button aria-label={`${item.title}，拖动调整时间`} className={`calendar-week-event personal${preview ? " dragging" : ""}`} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={() => setPreview(null)} style={{ ...style, ...previewStyle }}>{children}{previewStart && <span className="calendar-drag-preview">{formatTime(previewStart)}</span>}</button>;
 }
 
 function CalendarAgendaItem({ item, onEdit }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void }) {
@@ -358,6 +373,7 @@ function calendarRange(anchor: Date, view: CalendarView) {
 function startOfWeek(value: Date) { const date = startOfDay(value); return addDays(date, -((date.getDay() + 6) % 7)); }
 function startOfDay(value: Date) { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
 function addDays(value: Date, amount: number) { const date = new Date(value); date.setDate(date.getDate() + amount); return date; }
+function shiftCalendarTime(value: Date, dayDelta: number, minuteDelta: number) { const date = addDays(value, dayDelta); date.setMinutes(date.getMinutes() + minuteDelta); return date; }
 function isSameDay(left: Date, right: Date) { return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate(); }
 function isToday(value: Date) { return isSameDay(value, new Date()); }
 function occursOn(item: CalendarItem, day: Date) { const start = startOfDay(day); const end = addDays(start, 1); return item.start < end && item.end > start; }

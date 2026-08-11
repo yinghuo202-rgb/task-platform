@@ -46,6 +46,7 @@ suite("concurrent AUTO claim", () => {
       data: {
         creatorId: publisher.id,
         name: "并发测试项目",
+        kind: "COMPANION",
         members: {
           create: [
             { userId: publisher.id, role: "OWNER" },

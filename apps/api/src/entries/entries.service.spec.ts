@@ -45,6 +45,21 @@ describe("EntriesService private-space permissions", () => {
     }));
   });
 
+  it("keeps a calendar date unchanged when an ISO value contains a positive timezone", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = {
+      project: { findFirst: vi.fn().mockResolvedValue({ id: "22222222-2222-4222-8222-222222222222" }) },
+      entry: { findMany },
+    } as unknown as PrismaService;
+    const service = new EntriesService(prisma, new ConfigService(), storage);
+
+    await service.list(user, { view: "list", limit: 20, date: "2026-08-11T00:00:00+08:00" });
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ entryDate: new Date("2026-08-11T00:00:00.000Z") }),
+    }));
+  });
+
   it("imports entry and comment authors from the structured manifest", async () => {
     const importRoot = await mkdtemp(join(tmpdir(), "journal-import-"));
     const entryCreate = vi.fn().mockImplementation(({ data }) => ({ id: "entry-id", ...data }));
