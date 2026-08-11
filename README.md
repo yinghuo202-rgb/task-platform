@@ -20,7 +20,7 @@
 - 任务、申请、成果附件和用户头像存储 API；MIME/扩展名/大小/数量/路径校验及受控下载。
 - 管理员用户禁用、任务下架/恢复、争议裁定和审计日志。
 - 响应式 Web、移动端底部导航、语义化表单、键盘焦点、PWA manifest。
-- 首页日历支持月/周/日视图；周视图和日视图可拖动个人日程调整日期与时间，并显示全天手帐标记和当前时间线。
+- 首页日历支持日/三日/周/月视图；时间轴可拖动个人日程调整日期、时间和时长，并默认显示可关闭的中国法定节假日、调休、二十四节气及常用传统节日。
 - 手帐与点评在线编辑并保存到 PostgreSQL，支持 Markdown 一次性导入、版本记录、归档、成员回应、日历标记、全部历史时间轴和同日回忆。
 - Swagger、Prisma migration、开发 seed、安全管理员初始化、备份/恢复脚本。
 - 单元、组件、并发集成及 Playwright 生命周期测试。
@@ -238,19 +238,21 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从旧版本在线更新到 v1.9.0
+### 从旧版本在线更新到 v1.10.0
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.9.0
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.9.0
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.9.0
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.10.0
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.10.0
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.10.0
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
 
 导入页面会显示“新增/跳过”数量。如果提示导入目录没有 Markdown，说明迁移包还没有解压，或只把 zip 文件放进了目录；请把迁移包内的 `journal-import-manifest.json`、`entries/` 和 `assets/` 放在 `JOURNAL_IMPORT_PATH` 对应目录的根部，再点击导入。
+
+v1.10.0 为首页日历内置中国历并默认开启，覆盖法定节假日、调休上班、二十四节气和常用传统节日；计算在浏览器本地完成，NAS 运行时不依赖外网。工具栏可随时隐藏中国历，选择会保存在当前设备。法定节假日数据应在国务院发布下一年度安排后随应用版本更新。
 
 v1.2.9 兼容极空间本机转发端口动态变化：`127.0.0.1`/`localhost` 的任意端口都会被识别为本机远程访问来源，手机登录不再受临时端口变化影响。
 

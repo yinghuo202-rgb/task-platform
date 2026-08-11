@@ -160,6 +160,9 @@ importers:
       '@task-platform/shared-validation':
         specifier: workspace:*
         version: link:../../packages/shared-validation
+      chinese-days:
+        specifier: 1.5.9
+        version: 1.5.9
       lucide-react:
         specifier: ^0.562.0
         version: 0.562.0(react@19.2.8)
@@ -2641,6 +2644,9 @@ packages:
 
   chardet@2.2.0:
     resolution: {integrity: sha512-rddelWYNPRrXq6PtNEN2S3f6t9ILzvqaN5pVgi4kqt9jHQaXIial9PznB5iSPVlQSLNaaH22ItWz3EJtQ10+OA==}
+
+  chinese-days@1.5.9:
+    resolution: {integrity: sha512-YwWUPcrtzlH5JIkSFCXerKb7Pox85G4LSVLZcrRMAzRuF8FmfmCC/6xGYmDyHtosvaYH/DyI5W8mnYGl01fu0g==}
 
   chokidar@4.0.3:
     resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
@@ -7487,6 +7493,8 @@ snapshots:
       supports-color: 7.2.0
 
   chardet@2.2.0: {}
+
+  chinese-days@1.5.9: {}
 
   chokidar@4.0.3:
     dependencies:

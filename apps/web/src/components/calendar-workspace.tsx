@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, ListTodo, Plus, Trash2, UserPlus, X } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, ListTodo, Plus, SunMedium, Trash2, UserPlus, X } from "lucide-react";
 import type { CalendarEvent as PersonalCalendarEvent, CalendarFeedEvent, CalendarSubscriptionOverview, TaskSummary } from "@task-platform/shared-types";
 import { apiFetch, ApiError } from "@/lib/api";
+import { chinaCalendarEvents, type ChinaCalendarKind } from "@/lib/china-calendar";
 import { personalTaskTimeLabel } from "@/lib/task-time";
 import { HomeReminderStrip } from "./home-reminder-strip";
 import { Button, Field, Input, Textarea } from "./ui";
@@ -14,7 +15,7 @@ type CalendarEntrySummary = { id: string; type: "JOURNAL" | "REVIEW"; title: str
 type CalendarEntryIndexResponse = { records: CalendarEntrySummary[]; total: number; canImport: boolean };
 type CalendarItem = {
   id: string;
-  source: "personal" | "subscribed" | "task" | "entry";
+  source: "personal" | "subscribed" | "task" | "entry" | "china-calendar";
   title: string;
   start: Date;
   end: Date;
@@ -24,12 +25,14 @@ type CalendarItem = {
   event?: CalendarFeedEvent;
   ownerName?: string;
   entry?: CalendarEntrySummary;
+  calendarKind?: ChinaCalendarKind;
   allDay?: boolean;
 };
 type EventForm = { title: string; description: string; startsAt: string; endsAt: string; color: string };
 
 const weekLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 const colors = ["#8f86b7", "#c98f9f", "#79a89b", "#c9a36d", "#7f9db8"];
+const CHINA_CALENDAR_SETTING = "la-vie:china-calendar";
 
 export function CalendarWorkspace() {
   const [anchor, setAnchor] = useState(() => new Date());
@@ -48,11 +51,13 @@ export function CalendarWorkspace() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [subscriptionBusy, setSubscriptionBusy] = useState("");
+  const [showChinaCalendar, setShowChinaCalendar] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const eventMutationRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     if (window.matchMedia("(max-width: 640px)").matches) setView("day");
+    if (window.localStorage.getItem(CHINA_CALENDAR_SETTING) === "off") setShowChinaCalendar(false);
     setCurrentTime(Date.now());
     const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
     return () => window.clearInterval(timer);
@@ -91,6 +96,8 @@ export function CalendarWorkspace() {
 
   useEffect(() => { void loadSubscriptions(); }, [loadSubscriptions]);
 
+  const chinaEvents = useMemo(() => showChinaCalendar ? chinaCalendarEvents(range.from, range.to) : [], [range.from, range.to, showChinaCalendar]);
+
   const items = useMemo<CalendarItem[]>(() => [
     ...events.map((event) => ({ id: event.id, source: event.editable ? "personal" as const : "subscribed" as const, title: event.title, start: new Date(event.startsAt), end: new Date(event.endsAt), color: event.color, description: event.description, event, ownerName: event.owner.displayName })),
     ...tasks.flatMap((task) => {
@@ -103,12 +110,16 @@ export function CalendarWorkspace() {
       const start = new Date(`${entry.entryDate.slice(0, 10)}T00:00:00`);
       return { id: `entry-${entry.id}`, source: "entry" as const, title: entry.title, start, end: addDays(start, 1), color: entry.type === "REVIEW" ? "#9b91b4" : "#86aa9e", entry, allDay: true };
     }),
-  ].sort((left, right) => left.start.getTime() - right.start.getTime()), [events, journalEntries, tasks]);
+    ...chinaEvents.map((event) => {
+      const start = new Date(`${event.date}T00:00:00`);
+      return { id: event.id, source: "china-calendar" as const, title: event.title, start, end: addDays(start, 1), color: event.color, calendarKind: event.kind, allDay: true };
+    }),
+  ].sort((left, right) => left.start.getTime() - right.start.getTime()), [chinaEvents, events, journalEntries, tasks]);
 
   const selectedItems = useMemo(() => items.filter((item) => occursOn(item, selectedDate)), [items, selectedDate]);
   const unscheduledTasks = useMemo(() => tasks.filter((task) => !task.personalDueAt && !task.deadline && task.personalAssignmentStatus !== "COMPLETED" && task.personalAssignmentStatus !== "CANCELLED"), [tasks]);
   const upcomingSchedule = useMemo(() => {
-    const next = items.find((item) => item.source !== "entry" && item.end.getTime() >= currentTime);
+    const next = items.find((item) => item.source !== "entry" && item.source !== "china-calendar" && item.end.getTime() >= currentTime);
     return next ? { title: next.title, startsAt: next.start } : null;
   }, [currentTime, items]);
 
@@ -223,6 +234,11 @@ export function CalendarWorkspace() {
     if (view === "month" && nextView !== "month") setAnchor(selectedDate);
     setView(nextView);
   };
+  const toggleChinaCalendar = () => setShowChinaCalendar((current) => {
+    const next = !current;
+    window.localStorage.setItem(CHINA_CALENDAR_SETTING, next ? "on" : "off");
+    return next;
+  });
 
   return <div className="calendar-page">
     <HomeReminderStrip upcoming={upcomingSchedule} />
@@ -231,6 +247,7 @@ export function CalendarWorkspace() {
         <div className="calendar-navigation"><button onClick={goToday}>今天</button><button aria-label="上一段时间" onClick={() => navigate(-1)}><ChevronLeft size={18} /></button><button aria-label="下一段时间" onClick={() => navigate(1)}><ChevronRight size={18} /></button><h2>{rangeLabel(anchor, view)}</h2></div>
         <div className="calendar-toolbar-controls">
           <div className="calendar-view-tabs" role="tablist" aria-label="日历视图"><button className={view === "day" ? "active" : ""} aria-selected={view === "day"} role="tab" onClick={() => changeView("day")}>日</button><button className={view === "three-day" ? "active" : ""} aria-selected={view === "three-day"} role="tab" onClick={() => changeView("three-day")}>三日</button><button className={view === "week" ? "active" : ""} aria-selected={view === "week"} role="tab" onClick={() => changeView("week")}>周</button><button className={view === "month" ? "active" : ""} aria-selected={view === "month"} role="tab" onClick={() => changeView("month")}>月</button></div>
+          <Button aria-pressed={showChinaCalendar} className={`secondary small calendar-tool-button china-calendar-button${showChinaCalendar ? " active" : ""}`} onClick={toggleChinaCalendar} title={showChinaCalendar ? "隐藏节假日、调休与节气" : "显示节假日、调休与节气"}><SunMedium size={15} />中国历</Button>
           <Button className="secondary small calendar-tool-button" onClick={() => setSubscriptionOpen(true)}><UserPlus size={15} />订阅{(subscriptions?.incoming.filter((item) => item.status === "PENDING").length ?? 0) > 0 && <b>{subscriptions!.incoming.filter((item) => item.status === "PENDING").length}</b>}</Button>
           <Button className="small calendar-tool-button" onClick={() => openCreate()}><Plus size={15} />新建</Button>
         </div>
@@ -247,7 +264,7 @@ export function CalendarWorkspace() {
           <div className="calendar-agenda-heading"><div><h3>{isToday(selectedDate) ? "今天的安排" : "当天安排"}</h3><p>{selectedItems.length ? `${selectedItems.length} 项日程` : "给自己留一点空白"}</p></div><button aria-label="在当天新建日程" onClick={() => openCreate(selectedDate)}><Plus size={17} /></button></div>
           <div className="calendar-agenda-list">{selectedItems.length ? selectedItems.map((item) => <CalendarAgendaItem item={item} onEdit={openEdit} key={item.id} />) : <div className="calendar-agenda-empty"><CalendarDays size={24} /><span>当天还没有安排</span></div>}</div>
           {unscheduledTasks.length > 0 && <div className="unscheduled-orders"><h3><ListTodo size={17} />待安排的事情</h3>{unscheduledTasks.slice(0, 4).map((task) => <Link href={`/tasks/${task.id}`} key={task.id}><i style={{ background: task.project.color }} /><span><strong>{task.title}</strong><small>还没有安排时间</small></span></Link>)}</div>}
-          <div className="calendar-legend"><span><i className="personal" />我的日程</span><span><i className="subscribed" />共享日程</span><span><i className="order" />清单</span><span><i className="entry" />手帐</span></div>
+          <div className="calendar-legend"><span><i className="personal" />我的日程</span><span><i className="subscribed" />共享日程</span><span><i className="order" />清单</span><span><i className="entry" />手帐</span>{showChinaCalendar && <span><i className="china-calendar" />中国历</span>}</div>
         </aside>
       </div>
     </section>
@@ -337,7 +354,7 @@ function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, o
   }, [currentMinutes, days]);
   return <div className={`calendar-week${mode === "day" ? " single-day" : mode === "three-day" ? " three-day" : ""}`}>
     <div className="calendar-week-header" style={headerStyle}><span />{days.map((day) => <button className={`${isToday(day) ? "today" : ""}${isSameDay(day, selectedDate) ? " selected" : ""}`} key={day.toISOString()} onClick={() => onSelect(day)}><small>{weekLabels[(day.getDay() + 6) % 7]}</small><strong>{day.getDate()}</strong></button>)}</div>
-    <div className="calendar-week-all-day" style={headerStyle}><span>记录</span>{days.map((day) => <div key={day.toISOString()}>{items.filter((item) => item.allDay && occursOn(item, day)).map((item) => <Link href={`/journal?entry=${item.entry!.id}`} key={item.id}><i style={{ background: item.color }} />{item.title}</Link>)}</div>)}</div>
+    <div className="calendar-week-all-day" style={headerStyle}><span>全天</span>{days.map((day) => <div key={day.toISOString()}>{items.filter((item) => item.allDay && occursOn(item, day)).map((item) => <CalendarAllDayItem item={item} key={item.id} />)}</div>)}</div>
     <div className="calendar-week-scroll" ref={scrollRef}><div className="calendar-time-labels">{hours.map((hour) => <span style={{ top: hour * 60 }} key={hour}>{`${String(hour).padStart(2, "0")}:00`}</span>)}</div><div className="calendar-week-columns" style={columnStyle}>{days.map((day) => <div className="calendar-week-day" key={day.toISOString()} onDoubleClick={(event) => onCreate(withHour(day, Math.floor(event.nativeEvent.offsetY / 60)))}>{hours.map((hour) => <i style={{ top: hour * 60 }} key={hour} />)}{isToday(day) && <b className="calendar-current-time" aria-label="当前时间" style={{ top: currentMinutes }} />}{items.filter((item) => !item.allDay && occursOn(item, day)).map((item) => <WeekEvent item={item} onEdit={onEdit} onMove={onMove} onResize={onResize} key={item.id} />)}</div>)}</div></div>
   </div>;
 }
@@ -347,7 +364,14 @@ function CalendarPill({ item, onEdit }: { item: CalendarItem; onEdit: (event: Pe
   if (item.source === "entry") return <Link className="calendar-pill entry" href={`/journal?entry=${item.entry!.id}`} onClick={(event) => event.stopPropagation()}>{content}</Link>;
   if (item.source === "task") return <Link className="calendar-pill task" href={`/tasks/${item.task!.id}`} onClick={(event) => event.stopPropagation()}>{content}</Link>;
   if (item.source === "personal") return <button className="calendar-pill personal" onClick={(event) => { event.stopPropagation(); onEdit(item.event!); }}>{content}</button>;
+  if (item.source === "china-calendar") return <div className={`calendar-pill china-calendar ${item.calendarKind}`} title="中国历">{content}</div>;
   return <div className="calendar-pill subscribed" title={`${item.ownerName}的日程`}>{content}</div>;
+}
+
+function CalendarAllDayItem({ item }: { item: CalendarItem }) {
+  const content = <><i style={{ background: item.color }} />{item.title}</>;
+  if (item.source === "entry") return <Link href={`/journal?entry=${item.entry!.id}`}>{content}</Link>;
+  return <span className={item.source === "china-calendar" ? `china-calendar ${item.calendarKind}` : ""}>{content}</span>;
 }
 
 function WeekEvent({ item, onEdit, onMove, onResize }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; onResize: (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => void }) {
@@ -454,11 +478,15 @@ function DraggableWeekEvent({ item, onEdit, onMove, onResize, style, children }:
 }
 
 function CalendarAgendaItem({ item, onEdit }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void }) {
-  const content = <><i style={{ background: item.color }} /><span><small>{item.allDay ? "当天手帐" : `${formatTime(item.start)}–${formatTime(item.end)}`}</small><strong>{item.title}</strong>{item.task && <em>{item.task.project.name} · {personalTaskTimeLabel(item.task)}</em>}{item.source === "subscribed" && <em>{item.ownerName}的日程</em>}</span></>;
+  const content = <><i style={{ background: item.color }} /><span><small>{item.source === "china-calendar" ? chinaCalendarKindLabel(item.calendarKind) : item.allDay ? "当天手帐" : `${formatTime(item.start)}–${formatTime(item.end)}`}</small><strong>{item.title}</strong>{item.task && <em>{item.task.project.name} · {personalTaskTimeLabel(item.task)}</em>}{item.source === "subscribed" && <em>{item.ownerName}的日程</em>}</span></>;
   if (item.source === "entry") return <Link href={`/journal?entry=${item.entry!.id}`}>{content}</Link>;
   if (item.source === "task") return <Link href={`/tasks/${item.task!.id}`}>{content}</Link>;
   if (item.source === "personal") return <button onClick={() => onEdit(item.event!)}>{content}</button>;
-  return <div className="subscribed">{content}</div>;
+  return <div className={item.source === "china-calendar" ? "china-calendar" : "subscribed"}>{content}</div>;
+}
+
+function chinaCalendarKindLabel(kind?: ChinaCalendarKind) {
+  return { holiday: "中国历 · 法定假日", workday: "中国历 · 调休", "solar-term": "中国历 · 二十四节气", festival: "中国历 · 传统节日" }[kind ?? "festival"];
 }
 
 export function calendarRange(anchor: Date, view: CalendarView) {
