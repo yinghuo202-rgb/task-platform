@@ -238,21 +238,21 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从 v1.1.0 在线更新到 v1.2.5
+### 从 v1.1.0 在线更新到 v1.2.6
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.2.5
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.2.5
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.5
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.2.6
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.2.6
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.6
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
 
 导入页面会显示“新增/跳过”数量。如果提示导入目录没有 Markdown，说明迁移包还没有解压，或只把 zip 文件放进了目录；请把迁移包内的 `journal-import-manifest.json`、`entries/` 和 `assets/` 放在 `JOURNAL_IMPORT_PATH` 对应目录的根部，再点击导入。
 
-v1.2.5 会复用已拉取的 API 镜像执行上传目录初始化，不再额外拉取 busybox；同时所有依赖声明使用极空间兼容的列表格式。它会在 API 启动前自动初始化 `/data/uploads/journal` 并修正绑定目录权限，避免出现 `EACCES: permission denied`。
+v1.2.6 进一步兼容无法修改 NAS ACL 的绑定目录：手帐图片复制失败时会继续导入，并从只读迁移目录直接提供图片，不会再因 `EACCES: permission denied` 中断整批迁移。
 
 ## 本地开发
 
