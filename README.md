@@ -216,9 +216,11 @@ docker compose exec \
 
 1. 在 NAS 自带反向代理、Tailscale Serve、Caddy 或边界 Nginx 上终止 HTTPS。
 2. 将 HTTPS 流量转发到 `http://127.0.0.1:8080`。
-3. 设置 `PUBLIC_APP_URL=https://tasks.example.com`、`COOKIE_SECURE=true`。
+3. 设置 `PUBLIC_APP_URL=https://tasks.example.com`、`ALLOWED_ORIGINS=https://tasks.example.com,https://nas-vpn.example.com`、`COOKIE_SECURE=true`。
 4. 只在路由器/防火墙开放 80/443；不要暴露 Web、API、PostgreSQL 容器端口。
 5. 保留 `X-Forwarded-Proto`、`X-Forwarded-For` 和 `Host` 请求头。
+
+API 会同时接受当前反向代理公开的同源地址，因此从局域网 IP、VPN 地址或外网域名访问时，不必为了“请求来源不受信任”反复更换数据库或 JWT 配置。若还存在第二个固定域名，可将它以逗号分隔写入 `ALLOWED_ORIGINS`。
 
 修改环境变量后执行：
 
@@ -236,17 +238,19 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从 v1.1.0 在线更新到 v1.2.0
+### 从 v1.1.0 在线更新到 v1.2.1
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.2.0
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.2.0
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.0
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.2.1
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.2.1
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.1
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
+
+导入页面会显示“新增/跳过”数量。如果提示导入目录没有 Markdown，说明迁移包还没有解压，或只把 zip 文件放进了目录；请把迁移包内的 `journal-import-manifest.json`、`entries/` 和 `assets/` 放在 `JOURNAL_IMPORT_PATH` 对应目录的根部，再点击导入。
 
 ## 本地开发
 
