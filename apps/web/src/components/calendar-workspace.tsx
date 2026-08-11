@@ -9,7 +9,7 @@ import { personalTaskTimeLabel } from "@/lib/task-time";
 import { HomeReminderStrip } from "./home-reminder-strip";
 import { Button, Field, Input, Textarea } from "./ui";
 
-type CalendarView = "month" | "week" | "day";
+export type CalendarView = "month" | "week" | "three-day" | "day";
 type CalendarEntrySummary = { id: string; type: "JOURNAL" | "REVIEW"; title: string; entryDate: string; rating: number | string | null };
 type CalendarEntryIndexResponse = { records: CalendarEntrySummary[]; total: number; canImport: boolean };
 type CalendarItem = {
@@ -189,8 +189,12 @@ export function CalendarWorkspace() {
 
   const navigate = (direction: number) => setAnchor((current) => view === "month"
     ? new Date(current.getFullYear(), current.getMonth() + direction, 1)
-    : addDays(current, direction * (view === "day" ? 1 : 7)));
+    : addDays(current, direction * (view === "day" ? 1 : view === "three-day" ? 3 : 7)));
   const goToday = () => { const today = new Date(); setAnchor(today); setSelectedDate(startOfDay(today)); };
+  const changeView = (nextView: CalendarView) => {
+    if (view === "month" && nextView !== "month") setAnchor(selectedDate);
+    setView(nextView);
+  };
 
   return <div className="calendar-page">
     <HomeReminderStrip upcoming={upcomingSchedule} />
@@ -198,7 +202,7 @@ export function CalendarWorkspace() {
       <div className="calendar-toolbar">
         <div className="calendar-navigation"><button onClick={goToday}>今天</button><button aria-label="上一段时间" onClick={() => navigate(-1)}><ChevronLeft size={18} /></button><button aria-label="下一段时间" onClick={() => navigate(1)}><ChevronRight size={18} /></button><h2>{rangeLabel(anchor, view)}</h2></div>
         <div className="calendar-toolbar-controls">
-          <div className="calendar-view-tabs" role="tablist" aria-label="日历视图"><button className={view === "month" ? "active" : ""} aria-selected={view === "month"} role="tab" onClick={() => setView("month")}>月</button><button className={view === "week" ? "active" : ""} aria-selected={view === "week"} role="tab" onClick={() => setView("week")}>周</button><button className={view === "day" ? "active" : ""} aria-selected={view === "day"} role="tab" onClick={() => setView("day")}>日</button></div>
+          <div className="calendar-view-tabs" role="tablist" aria-label="日历视图"><button className={view === "day" ? "active" : ""} aria-selected={view === "day"} role="tab" onClick={() => changeView("day")}>日</button><button className={view === "three-day" ? "active" : ""} aria-selected={view === "three-day"} role="tab" onClick={() => changeView("three-day")}>三日</button><button className={view === "week" ? "active" : ""} aria-selected={view === "week"} role="tab" onClick={() => changeView("week")}>周</button><button className={view === "month" ? "active" : ""} aria-selected={view === "month"} role="tab" onClick={() => changeView("month")}>月</button></div>
           <Button className="secondary small calendar-tool-button" onClick={() => setSubscriptionOpen(true)}><UserPlus size={15} />订阅{(subscriptions?.incoming.filter((item) => item.status === "PENDING").length ?? 0) > 0 && <b>{subscriptions!.incoming.filter((item) => item.status === "PENDING").length}</b>}</Button>
           <Button className="small calendar-tool-button" onClick={() => openCreate()}><Plus size={15} />新建</Button>
         </div>
@@ -287,10 +291,11 @@ function MonthCalendar({ anchor, items, selectedDate, onSelect, onCreate, onEdit
   })}</div></div>;
 }
 
-function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, onEdit, onMove }: { mode: "week" | "day"; anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void }) {
+function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, onEdit, onMove }: { mode: Exclude<CalendarView, "month">; anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void }) {
   const days = useMemo(() => {
-    const start = mode === "day" ? startOfDay(anchor) : startOfWeek(anchor);
-    return Array.from({ length: mode === "day" ? 1 : 7 }, (_, index) => addDays(start, index));
+    const start = mode === "week" ? startOfWeek(anchor) : startOfDay(anchor);
+    const length = mode === "day" ? 1 : mode === "three-day" ? 3 : 7;
+    return Array.from({ length }, (_, index) => addDays(start, index));
   }, [anchor, mode]);
   const hours = Array.from({ length: 24 }, (_, index) => index);
   const columnStyle = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` };
@@ -302,7 +307,7 @@ function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, o
     const containsToday = days.some(isToday);
     scrollRef.current?.scrollTo({ top: Math.max(0, (containsToday ? currentMinutes : 8 * 60) - 220) });
   }, [currentMinutes, days]);
-  return <div className={`calendar-week${mode === "day" ? " single-day" : ""}`}>
+  return <div className={`calendar-week${mode === "day" ? " single-day" : mode === "three-day" ? " three-day" : ""}`}>
     <div className="calendar-week-header" style={headerStyle}><span />{days.map((day) => <button className={`${isToday(day) ? "today" : ""}${isSameDay(day, selectedDate) ? " selected" : ""}`} key={day.toISOString()} onClick={() => onSelect(day)}><small>{weekLabels[(day.getDay() + 6) % 7]}</small><strong>{day.getDate()}</strong></button>)}</div>
     <div className="calendar-week-all-day" style={headerStyle}><span>记录</span>{days.map((day) => <div key={day.toISOString()}>{items.filter((item) => item.allDay && occursOn(item, day)).map((item) => <Link href={`/journal?entry=${item.entry!.id}`} key={item.id}><i style={{ background: item.color }} />{item.title}</Link>)}</div>)}</div>
     <div className="calendar-week-scroll" ref={scrollRef}><div className="calendar-time-labels">{hours.map((hour) => <span style={{ top: hour * 60 }} key={hour}>{`${String(hour).padStart(2, "0")}:00`}</span>)}</div><div className="calendar-week-columns" style={columnStyle}>{days.map((day) => <div className="calendar-week-day" key={day.toISOString()} onDoubleClick={(event) => onCreate(withHour(day, Math.floor(event.nativeEvent.offsetY / 60)))}>{hours.map((hour) => <i style={{ top: hour * 60 }} key={hour} />)}{isToday(day) && <b className="calendar-current-time" aria-label="当前时间" style={{ top: currentMinutes }} />}{items.filter((item) => !item.allDay && occursOn(item, day)).map((item) => <WeekEvent item={item} onEdit={onEdit} onMove={onMove} key={item.id} />)}</div>)}</div></div>
@@ -374,8 +379,9 @@ function CalendarAgendaItem({ item, onEdit }: { item: CalendarItem; onEdit: (eve
   return <div className="subscribed">{content}</div>;
 }
 
-function calendarRange(anchor: Date, view: CalendarView) {
+export function calendarRange(anchor: Date, view: CalendarView) {
   if (view === "day") { const from = startOfDay(anchor); return { from, to: addDays(from, 1) }; }
+  if (view === "three-day") { const from = startOfDay(anchor); return { from, to: addDays(from, 3) }; }
   if (view === "week") { const from = startOfWeek(anchor); return { from, to: addDays(from, 7) }; }
   const from = startOfWeek(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
   return { from, to: addDays(from, 42) };
@@ -389,7 +395,7 @@ function isToday(value: Date) { return isSameDay(value, new Date()); }
 function occursOn(item: CalendarItem, day: Date) { const start = startOfDay(day); const end = addDays(start, 1); return item.start < end && item.end > start; }
 function formatTime(value: Date) { return new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(value); }
 function formatDate(value: Date) { return new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric" }).format(value); }
-function rangeLabel(anchor: Date, view: CalendarView) { if (view === "month") return `${anchor.getFullYear()} 年 ${anchor.getMonth() + 1} 月`; if (view === "day") return formatDate(anchor); const start = startOfWeek(anchor); const end = addDays(start, 6); return `${start.getMonth() + 1}月${start.getDate()}日 – ${end.getMonth() + 1}月${end.getDate()}日`; }
+export function rangeLabel(anchor: Date, view: CalendarView) { if (view === "month") return `${anchor.getFullYear()} 年 ${anchor.getMonth() + 1} 月`; if (view === "day") return formatDate(anchor); const start = view === "three-day" ? startOfDay(anchor) : startOfWeek(anchor); const end = addDays(start, view === "three-day" ? 2 : 6); return `${start.getMonth() + 1}月${start.getDate()}日 – ${end.getMonth() + 1}月${end.getDate()}日`; }
 function toLocalInput(value: Date) { const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000); return local.toISOString().slice(0, 16); }
 function eventFormFor(value: Date): EventForm { const start = new Date(value.getFullYear(), value.getMonth(), value.getDate(), value.getHours() || 9, 0); if (start < new Date() && isToday(start)) start.setHours(new Date().getHours() + 1, 0, 0, 0); const end = new Date(start.getTime() + 60 * 60_000); return { title: "", description: "", startsAt: toLocalInput(start), endsAt: toLocalInput(end), color: "#958ab8" }; }
 function withHour(value: Date, hour: number) { return new Date(value.getFullYear(), value.getMonth(), value.getDate(), Math.min(23, Math.max(0, hour)), 0); }

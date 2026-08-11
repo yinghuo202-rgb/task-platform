@@ -622,7 +622,7 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .calendar-legend i.order { border-radius: 50%; background: #4e82d8; }
 .calendar-legend i.entry { background: var(--mint); }
 .calendar-week { min-width: 700px; }
-.calendar-week.single-day { min-width: 0; }
+.calendar-week.single-day, .calendar-week.three-day { min-width: 0; }
 .calendar-week-header { display: grid; grid-template-columns: 54px repeat(7, minmax(0, 1fr)); min-height: 70px; border-bottom: 1px solid #e6e8ee; }
 .calendar-week-header > span { border-right: 1px solid #eceef3; }
 .calendar-week-header button { display: grid; place-items: center; align-content: center; gap: 3px; border: 0; border-right: 1px solid #eceef3; color: #687083; background: white; cursor: pointer; }
