@@ -69,6 +69,25 @@ describe("EntriesService private-space permissions", () => {
     }));
   });
 
+  it("loads a small visible batch without exposing another member's private entries", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = {
+      project: { findFirst: vi.fn().mockResolvedValue({ id: "22222222-2222-4222-8222-222222222222" }) },
+      entry: { findMany },
+    } as unknown as PrismaService;
+    const service = new EntriesService(prisma, new ConfigService(), storage);
+
+    await service.getMany(user, ["33333333-3333-4333-8333-333333333333"]);
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        id: { in: ["33333333-3333-4333-8333-333333333333"] },
+        projectId: "22222222-2222-4222-8222-222222222222",
+        OR: [{ visibility: "PUBLIC" }, { visibility: "PRIVATE", createdById: user.id }],
+      }),
+    }));
+  });
+
   it("keeps a calendar date unchanged when an ISO value contains a positive timezone", async () => {
     const findMany = vi.fn().mockResolvedValue([]);
     const prisma = {

@@ -8,7 +8,7 @@ import { Button, Field, Input, Textarea } from "./ui";
 
 type EntryKind = "JOURNAL" | "REVIEW";
 type EntryAuthor = { id: string; displayName: string; username: string; avatarPath?: string | null };
-type EntryIndex = { id: string; type: EntryKind; title: string; entryDate: string; rating: number | string | null; updatedAt: string; createdBy: EntryAuthor; _count?: { versions: number; comments: number } };
+type EntryIndex = { id: string; type: EntryKind; title: string; entryDate: string; rating: number | string | null; updatedAt: string; createdBy: EntryAuthor };
 type EntryIndexResponse = { records: EntryIndex[]; total: number; canImport: boolean };
 type Entry = EntryIndex & { contentMarkdown: string; category: string | null; tags: string[]; visibility: "PUBLIC" | "PRIVATE"; version: number; importedPath?: string | null };
 type EntryComment = { id: string; content: string; anchorBlock: number | null; anchorQuote: string | null; createdAt: string; canDelete: boolean; author: { id: string; displayName: string; username: string; avatarPath?: string | null } };
@@ -27,6 +27,8 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const [canImport, setCanImport] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [selected, setSelected] = useState<Entry | null>(null);
+  const [entryDetails, setEntryDetails] = useState<Record<string, Entry>>({});
+  const [streamPosition, setStreamPosition] = useState(0);
   const [view, setView] = useState<"stream" | "reader">("stream");
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -45,8 +47,10 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const detailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const entryAbortRef = useRef<AbortController | null>(null);
   const commentsAbortRef = useRef<AbortController | null>(null);
+  const streamBatchAbortRef = useRef<AbortController | null>(null);
   const entryRequestRef = useRef(0);
   const commentsRequestRef = useRef(0);
+  const railAnimationRef = useRef<number | null>(null);
   const entryCacheRef = useRef(new Map<string, CachedValue<Entry>>());
   const commentsCacheRef = useRef(new Map<string, CachedValue<EntryComment[]>>());
   const currentRecordIdRef = useRef<string | undefined>(undefined);
@@ -54,7 +58,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
 
   const currentRecord = records[activeIndex] ?? records[0] ?? null;
   const currentRecordId = currentRecord?.id;
-  const currentEntry = selected?.id === currentRecordId ? selected : null;
+  const currentEntry = currentRecordId ? entryDetails[currentRecordId] ?? (selected?.id === currentRecordId ? selected : null) : null;
 
   useEffect(() => {
     currentRecordIdRef.current = currentRecordId;
@@ -69,6 +73,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       setCanImport(response.data.canImport);
       const nextIndex = preferredId ? Math.max(0, response.data.records.findIndex((record) => record.id === preferredId)) : 0;
       setActiveIndex(nextIndex);
+      setStreamPosition(nextIndex);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "手帐加载失败");
     } finally {
@@ -91,6 +96,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     try {
       const response = await apiFetch<Entry>(`/entries/${id}`, { signal: controller.signal });
       entryCacheRef.current.set(id, { value: response.data, cachedAt: Date.now() });
+      setEntryDetails((current) => ({ ...current, [id]: response.data }));
       if (requestId === entryRequestRef.current && currentRecordIdRef.current === id) setSelected(response.data);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError" && !timedOut) return;
@@ -124,6 +130,8 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
     entryAbortRef.current?.abort();
     commentsAbortRef.current?.abort();
+    streamBatchAbortRef.current?.abort();
+    if (railAnimationRef.current != null) cancelAnimationFrame(railAnimationRef.current);
   }, []);
   useEffect(() => {
     if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
@@ -147,20 +155,47 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     const cachedEntry = entryCacheRef.current.get(id);
     const cachedComments = commentsCacheRef.current.get(id);
     const entryIsFresh = Boolean(cachedEntry && now - cachedEntry.cachedAt < JOURNAL_DETAIL_CACHE_TTL);
-    const commentsAreFresh = Boolean(cachedComments && now - cachedComments.cachedAt < JOURNAL_DETAIL_CACHE_TTL);
+    const commentsAreFresh = view === "stream" || Boolean(cachedComments && now - cachedComments.cachedAt < JOURNAL_DETAIL_CACHE_TTL);
     setSelected(cachedEntry?.value ?? null);
-    setComments(cachedComments?.value ?? []);
+    setComments(view === "reader" ? cachedComments?.value ?? [] : []);
     setDetailLoading(!cachedEntry);
-    setCommentsLoading(!cachedComments);
+    setCommentsLoading(view === "reader" && !cachedComments);
     if (entryIsFresh && commentsAreFresh) return;
     detailTimerRef.current = setTimeout(() => {
       if (!entryIsFresh) void loadEntry(id, !cachedEntry);
-      if (!commentsAreFresh) void loadComments(id, !cachedComments);
+      if (view === "reader" && !commentsAreFresh) void loadComments(id, !cachedComments);
     }, cachedEntry || cachedComments ? 0 : 80);
     return () => {
       if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
     };
-  }, [currentRecordId, loadComments, loadEntry]);
+  }, [currentRecordId, loadComments, loadEntry, view]);
+
+  useEffect(() => {
+    if (view !== "stream" || records.length < 2) return;
+    const nearby = records.slice(Math.max(0, activeIndex - 3), Math.min(records.length, activeIndex + 4));
+    const now = Date.now();
+    const ids = nearby
+      .map((record) => record.id)
+      .filter((id) => id !== currentRecordId && (!entryCacheRef.current.has(id) || now - entryCacheRef.current.get(id)!.cachedAt >= JOURNAL_DETAIL_CACHE_TTL));
+    if (!ids.length) return;
+    streamBatchAbortRef.current?.abort();
+    const controller = new AbortController();
+    streamBatchAbortRef.current = controller;
+    const timer = setTimeout(() => {
+      void apiFetch<Entry[]>(`/entries/batch?ids=${encodeURIComponent(ids.join(","))}`, { signal: controller.signal }).then((response) => {
+        const cachedAt = Date.now();
+        const details = Object.fromEntries(response.data.map((entry) => {
+          entryCacheRef.current.set(entry.id, { value: entry, cachedAt });
+          return [entry.id, entry];
+        }));
+        setEntryDetails((current) => ({ ...current, ...details }));
+      }).catch(() => undefined);
+    }, 100);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [activeIndex, currentRecordId, records, view]);
 
   useEffect(() => {
     const rail = railRef.current;
@@ -177,6 +212,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     const cachedEntry = nextId ? entryCacheRef.current.get(nextId) : undefined;
     const cachedComments = nextId ? commentsCacheRef.current.get(nextId) : undefined;
     setActiveIndex(nextIndex);
+    setStreamPosition(nextIndex);
     setSelected(cachedEntry?.value ?? null);
     setComments(cachedComments?.value ?? []);
     setDetailLoading(!cachedEntry);
@@ -190,22 +226,28 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   };
 
   const onRailScroll = () => {
-    const rail = railRef.current;
-    if (!rail || !records.length) return;
-    userScrolledRef.current = true;
-    const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
-    const progress = maxScroll === 0 ? 0 : rail.scrollTop / maxScroll;
-    const nextIndex = Math.min(records.length - 1, Math.max(0, Math.round(progress * (records.length - 1))));
-    if (nextIndex !== activeIndex) {
-      const nextId = records[nextIndex]?.id;
-      const cachedEntry = nextId ? entryCacheRef.current.get(nextId) : undefined;
-      const cachedComments = nextId ? commentsCacheRef.current.get(nextId) : undefined;
-      setActiveIndex(nextIndex);
-      setSelected(cachedEntry?.value ?? null);
-      setComments(cachedComments?.value ?? []);
-      setDetailLoading(!cachedEntry);
-      setCommentsLoading(!cachedComments);
-    }
+    if (railAnimationRef.current != null) return;
+    railAnimationRef.current = requestAnimationFrame(() => {
+      railAnimationRef.current = null;
+      const rail = railRef.current;
+      if (!rail || !records.length) return;
+      userScrolledRef.current = true;
+      const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
+      const progress = maxScroll === 0 ? 0 : rail.scrollTop / maxScroll;
+      const nextPosition = Math.min(records.length - 1, Math.max(0, progress * (records.length - 1)));
+      const nextIndex = Math.round(nextPosition);
+      setStreamPosition(nextPosition);
+      if (nextIndex !== activeIndex) {
+        const nextId = records[nextIndex]?.id;
+        const cachedEntry = nextId ? entryCacheRef.current.get(nextId) : undefined;
+        const cachedComments = nextId ? commentsCacheRef.current.get(nextId) : undefined;
+        setActiveIndex(nextIndex);
+        setSelected(cachedEntry?.value ?? null);
+        setComments(cachedComments?.value ?? []);
+        setDetailLoading(!cachedEntry);
+        setCommentsLoading(!cachedComments);
+      }
+    });
   };
 
   const onRailPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -259,10 +301,12 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       const response = await apiFetch<Entry>(editor.id ? `/entries/${editor.id}` : "/entries", { method: editor.id ? "PATCH" : "POST", body: JSON.stringify(payload) });
       const saved = response.data;
       entryCacheRef.current.set(saved.id, { value: saved, cachedAt: Date.now() });
+      setEntryDetails((current) => ({ ...current, [saved.id]: saved }));
       if (!editor.id) commentsCacheRef.current.set(saved.id, { value: [], cachedAt: Date.now() });
       const nextRecords = upsertEntryIndex(records, saved);
       setRecords(nextRecords);
       setActiveIndex(Math.max(0, nextRecords.findIndex((record) => record.id === saved.id)));
+      setStreamPosition(Math.max(0, nextRecords.findIndex((record) => record.id === saved.id)));
       setSelected(saved);
       if (!editor.id) setComments([]);
       setEditor(null);
@@ -281,6 +325,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       const response = await apiFetch<ImportResult>("/entries/import", { method: "POST" });
       entryCacheRef.current.clear();
       commentsCacheRef.current.clear();
+      setEntryDetails({});
       await loadIndex();
       const result = response.data;
       const detail = result.comments == null ? "" : `，${result.comments} 条回应`;
@@ -307,7 +352,6 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       });
       setCommentText("");
       setCommentAnchor(null);
-      setRecords((current) => current.map((record) => record.id === selected.id ? { ...record, _count: { versions: record._count?.versions ?? 1, comments: (record._count?.comments ?? 0) + 1 } } : record));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "留言发送失败");
     } finally {
@@ -324,7 +368,6 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
         commentsCacheRef.current.set(selected.id, { value: next, cachedAt: Date.now() });
         return next;
       });
-      setRecords((current) => current.map((record) => record.id === selected.id ? { ...record, _count: { versions: record._count?.versions ?? 1, comments: Math.max(0, (record._count?.comments ?? 1) - 1) } } : record));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "留言删除失败");
     }
@@ -340,10 +383,12 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       const nextRecords = records.filter((record) => record.id !== removedId);
       entryCacheRef.current.delete(removedId);
       commentsCacheRef.current.delete(removedId);
+      setEntryDetails((current) => Object.fromEntries(Object.entries(current).filter(([id]) => id !== removedId)));
       setEditor(null);
       setSelected(null);
       setRecords(nextRecords);
       setActiveIndex((current) => Math.max(0, Math.min(current, nextRecords.length - 1)));
+      setStreamPosition((current) => Math.max(0, Math.min(current, nextRecords.length - 1)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "删除失败");
     } finally {
@@ -360,49 +405,69 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     {error && <div className="form-message" role="alert">{error}</div>}
     {notice && <div className="form-message success" role="status">{notice}</div>}
     {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : <>
-      {view === "stream" && <StreamView records={records} activeIndex={activeIndex} current={currentEntry} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onOpenReader={() => setView("reader")} />}
+      {view === "stream" && <StreamView records={records} activeIndex={activeIndex} position={streamPosition} entries={entryDetails} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={(entry) => openEditor(entry)} onOpenReader={() => setView("reader")} />}
       {view === "reader" && <ReaderView activeIndex={activeIndex} count={records.length} entry={currentEntry} loading={detailLoading} comments={comments} commentsLoading={commentsLoading} commentAnchor={commentAnchor} commentValue={commentText} commentSaving={commentSaving} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onRequestComment={setCommentAnchor} onCancelComment={() => { setCommentAnchor(null); setCommentText(""); }} onCommentChange={setCommentText} onCommentSubmit={submitComment} onRemoveComment={(id) => void removeComment(id)} />}
     </>}
     {editor && <EntryEditor editor={editor} saving={saving} onChange={setEditor} onClose={() => setEditor(null)} onDelete={() => void removeEntry()} onSubmit={saveEntry} />}
   </div></section>;
 }
 
-function StreamView({ records, activeIndex, current, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onRetry, onEdit, onOpenReader }: {
-  records: EntryIndex[]; activeIndex: number; current: Entry | null; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: () => void; onOpenReader: () => void;
+function StreamView({ records, activeIndex, position, entries, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onRetry, onEdit, onOpenReader }: {
+  records: EntryIndex[]; activeIndex: number; position: number; entries: Record<string, Entry>; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: (entry: Entry) => void; onOpenReader: () => void;
 }) {
   const currentRecord = records[activeIndex];
   const windowStart = Math.max(0, Math.min(records.length - JOURNAL_TICK_WINDOW, activeIndex - Math.floor(JOURNAL_TICK_WINDOW / 2)));
   const visibleRecords = records.slice(windowStart, windowStart + JOURNAL_TICK_WINDOW);
-  const openReaderFromCard = (target: EventTarget | null) => {
-    if (!current || (target as HTMLElement | null)?.closest("button, a, input, textarea, select")) return;
-    onOpenReader();
+  const cardStart = Math.max(0, Math.floor(position) - 2);
+  const cardEnd = Math.min(records.length, Math.ceil(position) + 3);
+  const cards = records.slice(cardStart, cardEnd).map((record, offset) => ({ record, index: cardStart + offset }));
+  const activateCard = (index: number, entry: Entry | undefined, target: EventTarget | null) => {
+    if (!entry || (target as HTMLElement | null)?.closest("button, a, input, textarea, select")) return;
+    if (index === activeIndex) onOpenReader();
+    else onSelect(index);
   };
   return <div className="journal-stream-stage">
     <div className="journal-stream-meta"><strong>{currentRecord ? formatDate(currentRecord.entryDate) : "选择一天"}</strong><span>{activeIndex + 1} / {records.length} 条记录</span></div>
-    <article
-      className="journal-entry-card"
-      role={current ? "button" : undefined}
-      tabIndex={current ? 0 : undefined}
-      aria-label={current ? `打开《${current.title}》的翻页视图` : undefined}
-      onClick={(event) => openReaderFromCard(event.target)}
-      onKeyDown={(event) => {
-        if ((event.key === "Enter" || event.key === " ") && !(event.target as HTMLElement).closest("button, a, input, textarea, select")) {
-          event.preventDefault();
-          onOpenReader();
-        }
-      }}
-    >
-      <span className="journal-liquid-orb orb-one" aria-hidden="true" /><span className="journal-liquid-orb orb-two" aria-hidden="true" />
-      {!current ? <div className="journal-entry-loading" aria-live="polite">{detailLoading ? "正在打开这一页…" : <button type="button" onClick={onRetry}>这一页暂时没有打开，点击重试</button>}</div> : <>
-        <div className="journal-entry-copy">
-          <div className="journal-entry-meta"><span className="journal-kind"><span>▧</span>手帐</span><span>{current.createdBy.displayName}</span>{current.importedPath && <span className="journal-imported"><FileText size={12} />由 Markdown 迁入</span>}</div>
-          <h2>{current.title}</h2><MarkdownPreview value={current.contentMarkdown} compact />
-          <div className="journal-entry-foot"><span><MessageCircle size={14} />{currentRecord?._count?.comments ?? 0} 条回应</span><span>{current.category || "日常"}</span></div>
-        </div>
-        <div className="journal-entry-art" aria-hidden="true"><small>{new Date(current.entryDate).getFullYear()}</small><strong>{shortDate(current.entryDate)}</strong><span>☁</span></div>
-        <button className="journal-entry-edit" type="button" onClick={onEdit}>编辑</button>
-      </>}
-    </article>
+    <div className="journal-stream-deck" aria-label="手帐时光流">{cards.map(({ record, index }) => {
+      const entry = entries[record.id];
+      const distance = index - position;
+      const edgeDistance = Math.abs(distance);
+      const active = index === activeIndex;
+      const style = {
+        opacity: Math.max(0.06, 1 - edgeDistance * 0.31),
+        transform: `translateY(calc(-50% + ${distance * 190}px)) scale(${Math.max(0.91, 1 - edgeDistance * 0.025)})`,
+        zIndex: Math.max(1, 20 - Math.round(edgeDistance * 4)),
+      };
+      return <article
+        aria-current={active ? "true" : undefined}
+        aria-label={entry ? active ? `打开《${entry.title}》的翻页视图` : `选择《${entry.title}》` : `${record.title}正在载入`}
+        className={`journal-entry-card journal-stream-card${active ? " active" : ""}`}
+        key={record.id}
+        onClick={(event) => activateCard(index, entry, event.target)}
+        onKeyDown={(event) => {
+          if ((event.key === "Enter" || event.key === " ") && !(event.target as HTMLElement).closest("button, a, input, textarea, select")) {
+            event.preventDefault();
+            if (entry) {
+              if (active) onOpenReader();
+              else onSelect(index);
+            }
+          }
+        }}
+        role="button"
+        style={style}
+        tabIndex={active ? 0 : -1}
+      >
+        <span className="journal-liquid-orb orb-one" aria-hidden="true" /><span className="journal-liquid-orb orb-two" aria-hidden="true" />
+        {!entry ? <div className="journal-entry-loading" aria-live={active ? "polite" : "off"}>{active && !detailLoading ? <button type="button" onClick={onRetry}>这一页暂时没有打开，点击重试</button> : "正在整理这一页…"}</div> : <>
+          <div className="journal-entry-copy">
+            <div className="journal-entry-meta"><span className="journal-kind"><span>▧</span>手帐</span><span>{entry.createdBy.displayName}</span>{entry.importedPath && <span className="journal-imported"><FileText size={12} />Markdown 迁入</span>}</div>
+            <h2>{entry.title}</h2><MarkdownPreview value={entry.contentMarkdown} compact />
+          </div>
+          <div className="journal-entry-art" aria-hidden="true"><small>{new Date(entry.entryDate).getFullYear()}</small><strong>{shortDate(entry.entryDate)}</strong><span>☁</span></div>
+          {active && <button className="journal-entry-edit" type="button" onClick={() => onEdit(entry)}>编辑</button>}
+        </>}
+      </article>;
+    })}</div>
     <p className="journal-drag-hint"><span aria-hidden="true">↕</span>拖动右侧历史轴，查看全部记录</p>
     <aside className="journal-history-rail" aria-label="全部手帐历史">
       <div className="journal-history-line" aria-hidden="true" />
@@ -655,7 +720,6 @@ function parseMarkdown(value: string): MarkdownBlock[] {
 }
 
 export function upsertEntryIndex(records: EntryIndex[], entry: Entry): EntryIndex[] {
-  const previous = records.find((record) => record.id === entry.id);
   const nextRecord: EntryIndex = {
     id: entry.id,
     type: entry.type,
@@ -664,7 +728,6 @@ export function upsertEntryIndex(records: EntryIndex[], entry: Entry): EntryInde
     rating: entry.rating,
     updatedAt: entry.updatedAt,
     createdBy: entry.createdBy,
-    _count: { versions: entry.version, comments: previous?._count?.comments ?? 0 },
   };
   return [...records.filter((record) => record.id !== entry.id), nextRecord].sort((left, right) => {
     const dateOrder = new Date(right.entryDate).getTime() - new Date(left.entryDate).getTime();

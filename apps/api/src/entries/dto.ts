@@ -1,5 +1,5 @@
-import { Type } from "class-transformer";
-import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from "class-validator";
 import { EntryType, Visibility } from "../generated/prisma/enums";
 
 export class ListEntriesDto {
@@ -29,6 +29,15 @@ export class ListEntriesDto {
   @Min(1)
   @Max(5000)
   limit = 500;
+}
+
+export class BatchEntriesDto {
+  @Transform(({ value }) => typeof value === "string" ? value.split(",").filter(Boolean) : value)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(7)
+  @IsUUID("4", { each: true })
+  ids!: string[];
 }
 
 export class CreateEntryDto {

@@ -19,6 +19,10 @@ beforeEach(() => {
   apiFetch.mockReset();
   apiFetch.mockImplementation(async (path: string, options?: { method?: string; body?: string }) => {
     if (path.startsWith("/entries?")) return { data: { records, total: records.length, canImport: false }, requestId: "index" };
+    if (path.startsWith("/entries/batch?")) {
+      const ids = decodeURIComponent(path.split("ids=")[1] ?? "").split(",");
+      return { data: records.filter((record) => ids.includes(record.id)).map((record) => ({ ...record, contentMarkdown: `${record.title}正文`, category: null, tags: [], visibility: "PUBLIC", version: 1 })), requestId: "batch" };
+    }
     if (path.endsWith("/comments") && options?.method === "POST") {
       const payload = JSON.parse(options.body ?? "{}") as { content: string; anchorBlock: number; anchorQuote: string };
       return { data: { id: "comment-1", ...payload, createdAt: "2026-08-11T01:00:00.000Z", canDelete: true, author: records[1].createdBy }, requestId: "comment" };
@@ -51,7 +55,7 @@ describe("JournalWorkspace", () => {
     const next = upsertEntryIndex([...records], updated);
 
     expect(next.map((record) => record.id)).toEqual(["entry-2", "entry-1"]);
-    expect(next[0]).toMatchObject({ title: "刚刚更新", _count: { versions: 2, comments: 0 } });
+    expect(next[0]).toMatchObject({ title: "刚刚更新" });
   });
 
   it("keeps only the stream and reader views", async () => {
@@ -63,6 +67,15 @@ describe("JournalWorkspace", () => {
     expect(screen.queryByRole("button", { name: "全部" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "手帐" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "点评" })).not.toBeInTheDocument();
+  });
+
+  it("shows multiple journal excerpts in the stream without loading comments", async () => {
+    render(<JournalWorkspace />);
+
+    expect(await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "第二篇" }, { timeout: 5_000 })).toBeInTheDocument();
+    expect(apiFetch.mock.calls.some(([path]) => String(path).endsWith("/comments"))).toBe(false);
+    expect(screen.queryByText(/条回应/)).not.toBeInTheDocument();
   });
 
   it("keeps the journal editor focused on the essential fields", async () => {

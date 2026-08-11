@@ -4,7 +4,7 @@ import type { Response } from "express";
 import type { AuthUser } from "../common/auth-context";
 import { CurrentUser, Roles } from "../common/decorators";
 import { UserRole } from "../generated/prisma/enums";
-import { CreateEntryCommentDto, CreateEntryDto, ListEntriesDto, UpdateEntryDto } from "./dto";
+import { BatchEntriesDto, CreateEntryCommentDto, CreateEntryDto, ListEntriesDto, UpdateEntryDto } from "./dto";
 import { EntriesService } from "./entries.service";
 
 @ApiTags("Entries")
@@ -15,6 +15,11 @@ export class EntriesController {
   @Get()
   list(@CurrentUser() user: AuthUser, @Query() query: ListEntriesDto) {
     return this.entries.list(user, query);
+  }
+
+  @Get("batch")
+  batch(@CurrentUser() user: AuthUser, @Query() query: BatchEntriesDto) {
+    return this.entries.getMany(user, query.ids);
   }
 
   @Get("assets/:storageName")

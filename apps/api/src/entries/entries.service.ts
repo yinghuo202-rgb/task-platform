@@ -45,7 +45,6 @@ export class EntriesService {
           select: {
             id: true, type: true, title: true, entryDate: true, rating: true, updatedAt: true,
             createdBy: { select: publicUser },
-            _count: { select: { versions: true, comments: { where: { deletedAt: null } } } },
           },
         }),
         this.prisma.entry.count({ where }),
@@ -83,6 +82,24 @@ export class EntriesService {
       throw new NotFoundException("手帐不存在");
     }
     return entry;
+  }
+
+  async getMany(user: AuthUser, ids: string[]) {
+    const projectId = await this.resolveProjectId(user);
+    return this.prisma.entry.findMany({
+      where: {
+        id: { in: ids },
+        projectId,
+        status: "PUBLISHED",
+        ...(user.role === "ADMIN" ? {} : {
+          OR: [{ visibility: "PUBLIC" as const }, { visibility: "PRIVATE" as const, createdById: user.id }],
+        }),
+      },
+      include: {
+        createdBy: { select: publicUser },
+        updatedBy: { select: publicUser },
+      },
+    });
   }
 
   async create(user: AuthUser, dto: CreateEntryDto) {
