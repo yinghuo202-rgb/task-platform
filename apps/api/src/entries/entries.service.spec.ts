@@ -57,8 +57,8 @@ describe("EntriesService private-space permissions", () => {
     const prisma = {
       project: { findFirst: vi.fn().mockResolvedValue({ id: "22222222-2222-4222-8222-222222222222" }) },
       user: { findMany: vi.fn().mockResolvedValue([
-        { id: "admin-id", username: "yinghuo202", role: "ADMIN", status: "ACTIVE" },
-        { id: "cristina-id", username: "Cristina", role: "USER", status: "ACTIVE" },
+        { id: "admin-id", username: "yinghuo202", displayName: "萤火", role: "ADMIN", status: "ACTIVE" },
+        { id: "cristina-id", username: "Cristina_zl", displayName: "Cristina", role: "USER", status: "ACTIVE" },
       ]) },
       projectMember: { findMany: vi.fn().mockResolvedValue([{ userId: "cristina-id" }]) },
       entry: { findFirst: vi.fn().mockResolvedValue(null) },
