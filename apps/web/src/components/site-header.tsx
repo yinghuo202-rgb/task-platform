@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, CheckSquare, Heart, House, LogIn, PenLine, Users } from "lucide-react";
+import { Bell, Heart, House, LogIn, PenLine, Sparkles, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export function SiteHeader() {
@@ -25,7 +25,7 @@ export function SiteHeader() {
     <nav className="mobile-nav" aria-label="移动端导航">
       <Link href="/"><House /><span>日历</span></Link>
       <Link href={user ? "/journal" : "/login"}><PenLine /><span>手帐</span></Link>
-      {user ? <Link className="mobile-primary" href="/tasks/new"><CheckSquare /><span>新建</span></Link> : <Link className="mobile-primary" href="/login"><LogIn /><span>登录</span></Link>}
+      {user ? <Link className="mobile-primary" href="/tasks"><Sparkles /><span>大厅</span></Link> : <Link className="mobile-primary" href="/login"><LogIn /><span>登录</span></Link>}
       <Link href={user ? "/notifications" : "/login"}><Bell /><span>提醒</span></Link>
       <Link href={user ? "/profile" : "/login"}><Users /><span>我们</span></Link>
     </nav>

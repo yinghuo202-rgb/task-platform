@@ -39,11 +39,21 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const [commentSaving, setCommentSaving] = useState(false);
   const railRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ y: number; scrollTop: number } | null>(null);
+  const detailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const entryAbortRef = useRef<AbortController | null>(null);
+  const commentsAbortRef = useRef<AbortController | null>(null);
+  const entryRequestRef = useRef(0);
+  const commentsRequestRef = useRef(0);
+  const currentRecordIdRef = useRef<string | undefined>(undefined);
   const userScrolledRef = useRef(false);
 
   const filteredRecords = useMemo(() => filter === "ALL" ? records : records.filter((record) => record.type === filter), [filter, records]);
   const currentRecord = filteredRecords[activeIndex] ?? filteredRecords[0] ?? null;
   const currentRecordId = currentRecord?.id;
+
+  useEffect(() => {
+    currentRecordIdRef.current = currentRecordId;
+  }, [currentRecordId]);
 
   const loadIndex = useCallback(async (preferredId?: string) => {
     setLoading(true);
@@ -62,55 +72,90 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   }, []);
 
   const loadEntry = useCallback(async (id: string) => {
+    const requestId = ++entryRequestRef.current;
+    entryAbortRef.current?.abort();
+    const controller = new AbortController();
+    entryAbortRef.current = controller;
     setDetailLoading(true);
     try {
-      const response = await apiFetch<Entry>(`/entries/${id}`);
-      setSelected(response.data);
+      const response = await apiFetch<Entry>(`/entries/${id}`, { signal: controller.signal });
+      if (requestId === entryRequestRef.current && currentRecordIdRef.current === id) setSelected(response.data);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "手帐内容加载失败");
+      if (err instanceof Error && err.name === "AbortError") return;
+      if (requestId === entryRequestRef.current) setError(err instanceof ApiError ? err.message : "手帐内容加载失败");
     } finally {
-      setDetailLoading(false);
+      if (requestId === entryRequestRef.current) setDetailLoading(false);
     }
   }, []);
 
   const loadComments = useCallback(async (id: string) => {
+    const requestId = ++commentsRequestRef.current;
+    commentsAbortRef.current?.abort();
+    const controller = new AbortController();
+    commentsAbortRef.current = controller;
     setCommentsLoading(true);
     try {
-      const response = await apiFetch<EntryComment[]>(`/entries/${id}/comments`);
-      setComments(response.data);
+      const response = await apiFetch<EntryComment[]>(`/entries/${id}/comments`, { signal: controller.signal });
+      if (requestId === commentsRequestRef.current && currentRecordIdRef.current === id) setComments(response.data);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "留言加载失败");
+      if (err instanceof Error && err.name === "AbortError") return;
+      if (requestId === commentsRequestRef.current) setError(err instanceof ApiError ? err.message : "留言加载失败");
     } finally {
-      setCommentsLoading(false);
+      if (requestId === commentsRequestRef.current) setCommentsLoading(false);
     }
   }, []);
 
   useEffect(() => { void loadIndex(initialEntryId); }, [initialEntryId, loadIndex]);
+  useEffect(() => () => {
+    if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
+    entryAbortRef.current?.abort();
+    commentsAbortRef.current?.abort();
+  }, []);
   useEffect(() => {
-    if (currentRecordId) void Promise.all([loadEntry(currentRecordId), loadComments(currentRecordId)]);
+    if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
+    if (!currentRecordId) return;
+    const id = currentRecordId;
+    detailTimerRef.current = setTimeout(() => {
+      void loadEntry(id);
+      void loadComments(id);
+    }, 260);
+    return () => {
+      if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
+    };
   }, [currentRecordId, loadComments, loadEntry]);
 
   useEffect(() => {
     const rail = railRef.current;
     if (!rail || !filteredRecords.length || userScrolledRef.current) return;
-    const rowHeight = 24;
-    rail.scrollTo({ top: Math.max(0, activeIndex * rowHeight - rail.clientHeight / 2 + rowHeight / 2), behavior: "smooth" });
+    const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
+    const top = filteredRecords.length <= 1 ? 0 : (activeIndex / (filteredRecords.length - 1)) * maxScroll;
+    rail.scrollTo({ top, behavior: "auto" });
   }, [activeIndex, filteredRecords.length]);
 
   const selectIndex = (index: number) => {
     if (!filteredRecords.length) return;
     const nextIndex = Math.min(Math.max(index, 0), filteredRecords.length - 1);
     setActiveIndex(nextIndex);
+    setDetailLoading(true);
     const rail = railRef.current;
-    if (rail) rail.scrollTo({ top: Math.max(0, nextIndex * 24 - rail.clientHeight / 2 + 12), behavior: "smooth" });
+    if (rail) {
+      const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
+      const top = filteredRecords.length <= 1 ? 0 : (nextIndex / (filteredRecords.length - 1)) * maxScroll;
+      rail.scrollTo({ top, behavior: "auto" });
+    }
   };
 
   const onRailScroll = () => {
     const rail = railRef.current;
     if (!rail || !filteredRecords.length) return;
     userScrolledRef.current = true;
-    const nextIndex = Math.min(filteredRecords.length - 1, Math.max(0, Math.round((rail.scrollTop + rail.clientHeight / 2 - 12) / 24)));
-    if (nextIndex !== activeIndex) setActiveIndex(nextIndex);
+    const maxScroll = Math.max(0, rail.scrollHeight - rail.clientHeight);
+    const progress = maxScroll === 0 ? 0 : rail.scrollTop / maxScroll;
+    const nextIndex = Math.min(filteredRecords.length - 1, Math.max(0, Math.round(progress * (filteredRecords.length - 1))));
+    if (nextIndex !== activeIndex) {
+      setActiveIndex(nextIndex);
+      setDetailLoading(true);
+    }
   };
 
   const onRailPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -243,7 +288,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   return <section className="section compact"><div className="container journal-page">
     <header className="journal-header">
       <div><span className="eyebrow">LA VIE · OUR NOTES</span><h1>我们的手帐</h1><p>把普通的日子，慢慢收进来。</p></div>
-      <div className="journal-header-actions"><Button className="secondary" onClick={() => openEditor()}><PenLine size={16} />写一篇</Button>{canImport && <Button className="ghost" disabled={importing} onClick={() => void importEntries()}><FileDown size={16} />{importing ? "导入中…" : "导入旧 Markdown"}</Button>}</div>
+      <div className="journal-header-actions"><Button className="secondary" onClick={() => openEditor()}><PenLine size={16} />写一篇</Button>{canImport && <Button className="ghost small journal-import-button" disabled={importing} onClick={() => void importEntries()}><FileDown size={14} />{importing ? "导入中…" : "导入旧 Markdown"}</Button>}</div>
     </header>
     <div className="journal-toolbar"><div className="journal-view-tabs" role="tablist" aria-label="手帐视图">{([ ["stream", "时光流"], ["reader", "翻页看"], ["memory", "回忆"] ] as const).map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={view === key} className={view === key ? "active" : ""} onClick={() => setView(key)}>{label}</button>)}</div><div className="journal-filters">{([ ["ALL", "全部"], ["JOURNAL", "手帐"], ["REVIEW", "点评"] ] as const).map(([key, label]) => <button key={key} type="button" aria-pressed={filter === key} className={filter === key ? "active" : ""} onClick={() => setFilterAndReset(key)}>{label}</button>)}</div></div>
     {error && <div className="form-message" role="alert">{error}</div>}

@@ -238,14 +238,14 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从 v1.1.0 在线更新到 v1.2.9
+### 从 v1.1.0 在线更新到 v1.3.0
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.2.9
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.2.9
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.9
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.3.0
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.3.0
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.3.0
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
@@ -253,6 +253,8 @@ API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.2.9
 导入页面会显示“新增/跳过”数量。如果提示导入目录没有 Markdown，说明迁移包还没有解压，或只把 zip 文件放进了目录；请把迁移包内的 `journal-import-manifest.json`、`entries/` 和 `assets/` 放在 `JOURNAL_IMPORT_PATH` 对应目录的根部，再点击导入。
 
 v1.2.9 兼容极空间本机转发端口动态变化：`127.0.0.1`/`localhost` 的任意端口都会被识别为本机远程访问来源，手机登录不再受临时端口变化影响。
+
+v1.3.0 优化手机端导航和手帐时间流：手机底部导航可直接进入“协作大厅”；时间轴按实际滚动范围定位，停止拖动后才请求详情并取消过期请求，避免日期跳动和 `Too Many Requests`；“导入旧 Markdown”按钮改为紧凑尺寸。
 
 ## 本地开发
 
