@@ -187,6 +187,21 @@ export function CalendarWorkspace() {
     }
   };
 
+  const resizeEvent = async (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => {
+    const resized = resizeCalendarRange(new Date(event.startsAt), new Date(event.endsAt), edge, minuteDelta);
+    if (resized.startsAt.getTime() === new Date(event.startsAt).getTime() && resized.endsAt.getTime() === new Date(event.endsAt).getTime()) return;
+    const startsAt = resized.startsAt.toISOString();
+    const endsAt = resized.endsAt.toISOString();
+    setError("");
+    setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt, endsAt } : item));
+    try {
+      await apiFetch(`/calendar/events/${event.id}`, { method: "PATCH", body: JSON.stringify(edge === "start" ? { startsAt } : { endsAt }) });
+    } catch (err) {
+      setEvents((current) => current.map((item) => item.id === event.id ? { ...item, startsAt: event.startsAt, endsAt: event.endsAt } : item));
+      setError(err instanceof ApiError ? err.message : "日程时长调整失败");
+    }
+  };
+
   const navigate = (direction: number) => setAnchor((current) => view === "month"
     ? new Date(current.getFullYear(), current.getMonth() + direction, 1)
     : addDays(current, direction * (view === "day" ? 1 : view === "three-day" ? 3 : 7)));
@@ -212,7 +227,7 @@ export function CalendarWorkspace() {
         <div className="calendar-main">
           {loading ? <div className="calendar-loading">正在同步你的时间安排…</div> : view === "month"
             ? <MonthCalendar anchor={anchor} items={items} selectedDate={selectedDate} onSelect={(date) => setSelectedDate(startOfDay(date))} onCreate={(date) => openCreate(date)} onEdit={openEdit} />
-            : <WeekCalendar mode={view} anchor={anchor} items={items} selectedDate={selectedDate} onSelect={(date) => setSelectedDate(startOfDay(date))} onCreate={(date) => openCreate(date)} onEdit={openEdit} onMove={(event, dayDelta, minuteDelta) => void moveEvent(event, dayDelta, minuteDelta)} />}
+            : <WeekCalendar mode={view} anchor={anchor} items={items} selectedDate={selectedDate} onSelect={(date) => setSelectedDate(startOfDay(date))} onCreate={(date) => openCreate(date)} onEdit={openEdit} onMove={(event, dayDelta, minuteDelta) => void moveEvent(event, dayDelta, minuteDelta)} onResize={(event, edge, minuteDelta) => void resizeEvent(event, edge, minuteDelta)} />}
         </div>
         <aside className="calendar-agenda">
           <div className="calendar-agenda-date"><span>{weekLabels[(selectedDate.getDay() + 6) % 7]}</span><strong>{selectedDate.getDate()}</strong><small>{selectedDate.getMonth() + 1} 月</small></div>
@@ -291,7 +306,7 @@ function MonthCalendar({ anchor, items, selectedDate, onSelect, onCreate, onEdit
   })}</div></div>;
 }
 
-function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, onEdit, onMove }: { mode: Exclude<CalendarView, "month">; anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void }) {
+function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, onEdit, onMove, onResize }: { mode: Exclude<CalendarView, "month">; anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; onResize: (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => void }) {
   const days = useMemo(() => {
     const start = mode === "week" ? startOfWeek(anchor) : startOfDay(anchor);
     const length = mode === "day" ? 1 : mode === "three-day" ? 3 : 7;
@@ -310,7 +325,7 @@ function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, o
   return <div className={`calendar-week${mode === "day" ? " single-day" : mode === "three-day" ? " three-day" : ""}`}>
     <div className="calendar-week-header" style={headerStyle}><span />{days.map((day) => <button className={`${isToday(day) ? "today" : ""}${isSameDay(day, selectedDate) ? " selected" : ""}`} key={day.toISOString()} onClick={() => onSelect(day)}><small>{weekLabels[(day.getDay() + 6) % 7]}</small><strong>{day.getDate()}</strong></button>)}</div>
     <div className="calendar-week-all-day" style={headerStyle}><span>记录</span>{days.map((day) => <div key={day.toISOString()}>{items.filter((item) => item.allDay && occursOn(item, day)).map((item) => <Link href={`/journal?entry=${item.entry!.id}`} key={item.id}><i style={{ background: item.color }} />{item.title}</Link>)}</div>)}</div>
-    <div className="calendar-week-scroll" ref={scrollRef}><div className="calendar-time-labels">{hours.map((hour) => <span style={{ top: hour * 60 }} key={hour}>{`${String(hour).padStart(2, "0")}:00`}</span>)}</div><div className="calendar-week-columns" style={columnStyle}>{days.map((day) => <div className="calendar-week-day" key={day.toISOString()} onDoubleClick={(event) => onCreate(withHour(day, Math.floor(event.nativeEvent.offsetY / 60)))}>{hours.map((hour) => <i style={{ top: hour * 60 }} key={hour} />)}{isToday(day) && <b className="calendar-current-time" aria-label="当前时间" style={{ top: currentMinutes }} />}{items.filter((item) => !item.allDay && occursOn(item, day)).map((item) => <WeekEvent item={item} onEdit={onEdit} onMove={onMove} key={item.id} />)}</div>)}</div></div>
+    <div className="calendar-week-scroll" ref={scrollRef}><div className="calendar-time-labels">{hours.map((hour) => <span style={{ top: hour * 60 }} key={hour}>{`${String(hour).padStart(2, "0")}:00`}</span>)}</div><div className="calendar-week-columns" style={columnStyle}>{days.map((day) => <div className="calendar-week-day" key={day.toISOString()} onDoubleClick={(event) => onCreate(withHour(day, Math.floor(event.nativeEvent.offsetY / 60)))}>{hours.map((hour) => <i style={{ top: hour * 60 }} key={hour} />)}{isToday(day) && <b className="calendar-current-time" aria-label="当前时间" style={{ top: currentMinutes }} />}{items.filter((item) => !item.allDay && occursOn(item, day)).map((item) => <WeekEvent item={item} onEdit={onEdit} onMove={onMove} onResize={onResize} key={item.id} />)}</div>)}</div></div>
   </div>;
 }
 
@@ -322,21 +337,27 @@ function CalendarPill({ item, onEdit }: { item: CalendarItem; onEdit: (event: Pe
   return <div className="calendar-pill subscribed" title={`${item.ownerName}的日程`}>{content}</div>;
 }
 
-function WeekEvent({ item, onEdit, onMove }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void }) {
+function WeekEvent({ item, onEdit, onMove, onResize }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; onResize: (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => void }) {
   const minutes = item.start.getHours() * 60 + item.start.getMinutes();
-  const duration = Math.max(32, Math.min((item.end.getTime() - item.start.getTime()) / 60_000, 180));
+  const duration = Math.max(20, Math.min((item.end.getTime() - item.start.getTime()) / 60_000, 24 * 60 - minutes));
   const style = { top: minutes, height: duration, borderColor: item.color, background: `${item.color}18` };
   const content = <><strong>{item.title}</strong><small>{formatTime(item.start)}–{formatTime(item.end)}</small></>;
   if (item.source === "entry") return <Link className="calendar-week-event entry" href={`/journal?entry=${item.entry!.id}`} style={style}>{content}</Link>;
   if (item.source === "task") return <Link className="calendar-week-event task" href={`/tasks/${item.task!.id}`} style={style}>{content}</Link>;
-  if (item.source === "personal") return <DraggableWeekEvent item={item} onEdit={onEdit} onMove={onMove} style={style}>{content}</DraggableWeekEvent>;
+  if (item.source === "personal") return <DraggableWeekEvent item={item} onEdit={onEdit} onMove={onMove} onResize={onResize} style={style}>{content}</DraggableWeekEvent>;
   return <div className="calendar-week-event subscribed" style={style}>{content}<small>{item.ownerName}</small></div>;
 }
 
-function DraggableWeekEvent({ item, onEdit, onMove, style, children }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; style: CSSProperties; children: ReactNode }) {
+function DraggableWeekEvent({ item, onEdit, onMove, onResize, style, children }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; onResize: (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => void; style: CSSProperties; children: ReactNode }) {
   const pointer = useRef<{ x: number; y: number; moved: boolean }>({ x: 0, y: 0, moved: false });
+  const resizePointer = useRef<{ y: number; moved: boolean }>({ y: 0, moved: false });
   const [preview, setPreview] = useState<{ dayDelta: number; minuteDelta: number; columnWidth: number } | null>(null);
-  const dragDelta = (event: PointerEvent<HTMLButtonElement>) => {
+  const [resizePreview, setResizePreview] = useState<{ edge: "start" | "end"; minuteDelta: number } | null>(null);
+  const startsAt = new Date(item.event!.startsAt);
+  const endsAt = new Date(item.event!.endsAt);
+  const durationMinutes = Math.max(15, (endsAt.getTime() - startsAt.getTime()) / 60_000);
+  const startMinute = startsAt.getHours() * 60 + startsAt.getMinutes();
+  const dragDelta = (event: PointerEvent<HTMLDivElement>) => {
     const column = event.currentTarget.closest<HTMLElement>(".calendar-week-day");
     const columns = column?.parentElement;
     if (!column || !columns) return null;
@@ -346,19 +367,20 @@ function DraggableWeekEvent({ item, onEdit, onMove, style, children }: { item: C
     const nextIndex = Math.max(0, Math.min(columns.children.length - 1, Math.floor((event.clientX - rect.left) / columnWidth)));
     return { dayDelta: nextIndex - currentIndex, minuteDelta: Math.round((event.clientY - pointer.current.y) / 15) * 15, columnWidth };
   };
-  const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     pointer.current = { x: event.clientX, y: event.clientY, moved: false };
     setPreview(null);
+    setResizePreview(null);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
-  const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
     if (Math.abs(event.clientX - pointer.current.x) > 4 || Math.abs(event.clientY - pointer.current.y) > 4) {
       pointer.current.moved = true;
       setPreview(dragDelta(event));
     }
   };
-  const handlePointerUp = (event: PointerEvent<HTMLButtonElement>) => {
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
     if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
     event.currentTarget.releasePointerCapture(event.pointerId);
     if (!pointer.current.moved) { onEdit(item.event!); return; }
@@ -366,9 +388,56 @@ function DraggableWeekEvent({ item, onEdit, onMove, style, children }: { item: C
     setPreview(null);
     if (delta && (delta.dayDelta || delta.minuteDelta)) onMove(item.event!, delta.dayDelta, delta.minuteDelta);
   };
+  const resizeDelta = (event: PointerEvent<HTMLSpanElement>, edge: "start" | "end") => {
+    const rawDelta = Math.round((event.clientY - resizePointer.current.y) / 15) * 15;
+    if (edge === "start") return Math.max(-startMinute, Math.min(durationMinutes - 15, rawDelta));
+    return Math.max(-(durationMinutes - 15), Math.min(24 * 60 - startMinute - durationMinutes, rawDelta));
+  };
+  const handleResizePointerDown = (event: PointerEvent<HTMLSpanElement>) => {
+    event.stopPropagation();
+    resizePointer.current = { y: event.clientY, moved: false };
+    setPreview(null);
+    setResizePreview(null);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const handleResizePointerMove = (event: PointerEvent<HTMLSpanElement>, edge: "start" | "end") => {
+    event.stopPropagation();
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    if (Math.abs(event.clientY - resizePointer.current.y) > 3) {
+      resizePointer.current.moved = true;
+      setResizePreview({ edge, minuteDelta: resizeDelta(event, edge) });
+    }
+  };
+  const handleResizePointerUp = (event: PointerEvent<HTMLSpanElement>, edge: "start" | "end") => {
+    event.stopPropagation();
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    const delta = resizeDelta(event, edge);
+    const moved = resizePointer.current.moved;
+    setResizePreview(null);
+    if (moved && delta) onResize(item.event!, edge, delta);
+  };
+  const resizeWithKeyboard = (event: React.KeyboardEvent<HTMLSpanElement>, edge: "start" | "end") => {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    event.preventDefault();
+    event.stopPropagation();
+    const direction = event.key === "ArrowUp" ? -1 : 1;
+    const rawDelta = direction * 15;
+    const delta = edge === "start"
+      ? Math.max(-startMinute, Math.min(durationMinutes - 15, rawDelta))
+      : Math.max(-(durationMinutes - 15), Math.min(24 * 60 - startMinute - durationMinutes, rawDelta));
+    if (delta) onResize(item.event!, edge, delta);
+  };
   const previewStart = preview ? shiftCalendarTime(new Date(item.event!.startsAt), preview.dayDelta, preview.minuteDelta) : null;
-  const previewStyle = preview ? { transform: `translate(${preview.dayDelta * preview.columnWidth}px, ${preview.minuteDelta}px)` } : {};
-  return <button aria-label={`${item.title}，拖动调整时间`} className={`calendar-week-event personal${preview ? " dragging" : ""}`} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={() => setPreview(null)} style={{ ...style, ...previewStyle }}>{children}{previewStart && <span className="calendar-drag-preview">{formatTime(previewStart)}</span>}</button>;
+  const resizedRange = resizePreview ? resizeCalendarRange(startsAt, endsAt, resizePreview.edge, resizePreview.minuteDelta) : null;
+  const previewStyle = preview ? { transform: `translate(${preview.dayDelta * preview.columnWidth}px, ${preview.minuteDelta}px)` } : resizedRange ? { top: resizedRange.startsAt.getHours() * 60 + resizedRange.startsAt.getMinutes(), height: Math.max(20, (resizedRange.endsAt.getTime() - resizedRange.startsAt.getTime()) / 60_000) } : {};
+  const previewLabel = previewStart ? formatTime(previewStart) : resizedRange ? `${formatTime(resizedRange.startsAt)}–${formatTime(resizedRange.endsAt)}` : null;
+  return <div aria-label={`${item.title}，拖动日程可改期，拖动上下边缘可调整时长`} className={`calendar-week-event personal${preview ? " dragging" : ""}${resizePreview ? " resizing" : ""}`} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onEdit(item.event!); } }} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={() => { setPreview(null); setResizePreview(null); }} role="button" style={{ ...style, ...previewStyle }} tabIndex={0}>
+    <span aria-label="拖动调整开始时间" aria-orientation="horizontal" className="calendar-resize-handle start" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => resizeWithKeyboard(event, "start")} onPointerDown={handleResizePointerDown} onPointerMove={(event) => handleResizePointerMove(event, "start")} onPointerUp={(event) => handleResizePointerUp(event, "start")} onPointerCancel={() => setResizePreview(null)} role="separator" tabIndex={0} />
+    {children}
+    <span aria-label="拖动调整结束时间" aria-orientation="horizontal" className="calendar-resize-handle end" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => resizeWithKeyboard(event, "end")} onPointerDown={handleResizePointerDown} onPointerMove={(event) => handleResizePointerMove(event, "end")} onPointerUp={(event) => handleResizePointerUp(event, "end")} onPointerCancel={() => setResizePreview(null)} role="separator" tabIndex={0} />
+    {previewLabel && <span className="calendar-drag-preview">{previewLabel}</span>}
+  </div>;
 }
 
 function CalendarAgendaItem({ item, onEdit }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void }) {
@@ -390,6 +459,15 @@ function startOfWeek(value: Date) { const date = startOfDay(value); return addDa
 function startOfDay(value: Date) { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
 function addDays(value: Date, amount: number) { const date = new Date(value); date.setDate(date.getDate() + amount); return date; }
 function shiftCalendarTime(value: Date, dayDelta: number, minuteDelta: number) { const date = addDays(value, dayDelta); date.setMinutes(date.getMinutes() + minuteDelta); return date; }
+export function resizeCalendarRange(startsAt: Date, endsAt: Date, edge: "start" | "end", minuteDelta: number) {
+  const minimumDuration = 15 * 60_000;
+  if (edge === "start") {
+    const proposedStart = new Date(startsAt.getTime() + minuteDelta * 60_000);
+    return { startsAt: proposedStart.getTime() > endsAt.getTime() - minimumDuration ? new Date(endsAt.getTime() - minimumDuration) : proposedStart, endsAt: new Date(endsAt) };
+  }
+  const proposedEnd = new Date(endsAt.getTime() + minuteDelta * 60_000);
+  return { startsAt: new Date(startsAt), endsAt: proposedEnd.getTime() < startsAt.getTime() + minimumDuration ? new Date(startsAt.getTime() + minimumDuration) : proposedEnd };
+}
 function isSameDay(left: Date, right: Date) { return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate(); }
 function isToday(value: Date) { return isSameDay(value, new Date()); }
 function occursOn(item: CalendarItem, day: Date) { const start = startOfDay(day); const end = addDays(start, 1); return item.start < end && item.end > start; }
