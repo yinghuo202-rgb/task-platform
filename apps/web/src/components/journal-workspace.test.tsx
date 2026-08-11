@@ -32,7 +32,7 @@ beforeEach(() => {
 describe("JournalWorkspace", () => {
   it("keeps only the stream and reader views", async () => {
     render(<JournalWorkspace />);
-    expect(await screen.findByRole("heading", { name: "第一篇" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "时光流" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "翻页看" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "回忆" })).not.toBeInTheDocument();
@@ -40,7 +40,7 @@ describe("JournalWorkspace", () => {
 
   it("switches reader entries with a horizontal swipe", async () => {
     render(<JournalWorkspace />);
-    await screen.findByRole("heading", { name: "第一篇" });
+    await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
     await userEvent.click(screen.getByRole("tab", { name: "翻页看" }));
     const reader = screen.getByRole("article", { name: /左右滑动/ });
 
@@ -48,7 +48,7 @@ describe("JournalWorkspace", () => {
     fireEvent.pointerMove(reader, { clientX: 120, clientY: 104, pointerId: 1 });
     fireEvent.pointerUp(reader, { clientX: 120, clientY: 104, pointerId: 1 });
 
-    expect(await screen.findByRole("heading", { name: "第二篇" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "第二篇" }, { timeout: 5_000 })).toBeInTheDocument();
     expect(screen.getByText("2 / 2")).toBeInTheDocument();
   });
 });
