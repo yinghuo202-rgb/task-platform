@@ -15,10 +15,8 @@ services:
     ports:
       - "${PUBLIC_PORT:-8080}:8080"
     depends_on:
-      web:
-        condition: service_healthy
-      api:
-        condition: service_healthy
+      - web
+      - api
     networks: [frontend]
     read_only: true
     tmpfs:
@@ -59,11 +57,13 @@ services:
   api-storage-init:
     # Bind-mounted NAS folders are commonly created as root-owned 0755.
     # Prepare the writable upload tree before the non-root API starts.
-    image: "busybox:1.36"
+    image: "${API_IMAGE:-task-platform-api:1.0.0}"
     platform: "${APP_PLATFORM:-linux/amd64}"
     pull_policy: "${IMAGE_PULL_POLICY:-missing}"
     restart: "no"
-    command: ["sh", "-c", "mkdir -p /data/uploads/journal && (chown -R 10001:10001 /data/uploads || chmod -R a+rwX /data/uploads)"]
+    user: "0:0"
+    entrypoint: ["sh", "-c"]
+    command: "mkdir -p /data/uploads/journal && (chown -R 10001:10001 /data/uploads || chmod -R a+rwX /data/uploads)"
     volumes:
       - "${UPLOAD_DATA_PATH:-./data/uploads}:/data/uploads"
 
@@ -96,10 +96,8 @@ services:
       - "${UPLOAD_DATA_PATH:-./data/uploads}:/data/uploads"
       - "${JOURNAL_IMPORT_PATH:-./data/journal-import}:/data/journal-import:ro"
     depends_on:
-      db:
-        condition: service_healthy
-      api-storage-init:
-        condition: service_completed_successfully
+      - db
+      - api-storage-init
     networks: [frontend, backend]
     read_only: true
     tmpfs:
