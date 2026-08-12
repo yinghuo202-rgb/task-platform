@@ -468,7 +468,7 @@ function StreamView({ records, activeIndex, position, entries, detailLoading, ra
         </>}
       </article>;
     })}</div>
-    <p className="journal-drag-hint"><span aria-hidden="true">↕</span>拖动右侧历史轴，查看全部记录</p>
+    <p className="journal-drag-hint"><span aria-hidden="true">↕</span>拖动左侧历史轴，查看全部记录</p>
     <aside className="journal-history-rail" aria-label="全部手帐历史">
       <div className="journal-history-line" aria-hidden="true" />
       <div className="journal-history-viewport" ref={railRef} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
