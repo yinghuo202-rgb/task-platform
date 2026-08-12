@@ -5,10 +5,11 @@ export function Button({ className = "", ...props }: ButtonHTMLAttributes<HTMLBu
   return <button className={`button ${className}`} {...props} />;
 }
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={`input ${className}`} {...props} />;
+  // 只有登录/注册等账号字段显式声明 autocomplete；普通业务输入不应触发浏览器凭据联想。
+  return <input className={`input ${className}`} autoComplete="off" {...props} />;
 }
 export function Textarea({ className = "", ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea className={`input textarea ${className}`} {...props} />;
+  return <textarea className={`input textarea ${className}`} autoComplete="off" {...props} />;
 }
 export function Field({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: ReactNode }) {
   return <label className="field"><span>{label}{required && <span aria-hidden="true"> *</span>}</span>{children}{error && <small className="error" role="alert">{error}</small>}</label>;

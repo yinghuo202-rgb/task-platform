@@ -105,7 +105,7 @@ export function PersonalTodoList() {
     {loading ? <div className="loading">正在整理我们的清单…</div> : <div className="list-board-columns">
       <section className="list-column together-column">
         <ColumnHeader icon={<HeartHandshake />} eyebrow="TOGETHER" title="一起做的事" count={visibleWishes.length} />
-        <form className="wish-quick-add" onSubmit={createWish}><input aria-label="新的一起做事项" value={newWish} maxLength={500} onChange={(event) => setNewWish(event.target.value)} placeholder="再加一件想一起做的事" /><button type="submit" aria-label="添加" disabled={!newWish.trim() || busy === "new-wish"}><Plus size={16} /></button></form>
+        <form className="wish-quick-add" autoComplete="off" onSubmit={createWish}><input autoComplete="off" aria-label="新的一起做事项" value={newWish} maxLength={500} onChange={(event) => setNewWish(event.target.value)} placeholder="再加一件想一起做的事" /><button type="submit" aria-label="添加" disabled={!newWish.trim() || busy === "new-wish"}><Plus size={16} /></button></form>
         <div className="list-column-scroll">{visibleWishes.length ? visibleWishes.map((wish) => <button type="button" className={`wish-row${wish.completedAt ? " completed" : ""}`} key={wish.id} disabled={busy === wish.id} onClick={() => void toggleWish(wish)}><span className="wish-check">{wish.completedAt ? <Check /> : <Circle />}</span><span><strong>{wish.title}</strong>{wish.completedAt && <small>{completionLabel(wish.completedAt, wish.completedBy?.displayName)}</small>}</span></button>) : <ColumnEmpty text={showCompleted ? "还没有共同愿望" : "愿望都完成啦"} />}</div>
       </section>
 
