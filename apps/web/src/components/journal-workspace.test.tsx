@@ -78,6 +78,23 @@ describe("JournalWorkspace", () => {
     expect(screen.queryByText(/条回应/)).not.toBeInTheDocument();
   });
 
+  it("scrolls the time stream from the journal cards themselves", async () => {
+    render(<JournalWorkspace />);
+    await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
+    const deck = screen.getByLabelText("手帐时光流，可上下滑动");
+    const rail = screen.getByLabelText("全部手帐历史").querySelector<HTMLElement>(".journal-history-viewport")!;
+
+    rail.scrollTop = 0;
+    fireEvent.wheel(deck, { deltaY: 100, deltaMode: 0 });
+    expect(rail.scrollTop).toBe(35);
+
+    rail.scrollTop = 100;
+    fireEvent.pointerDown(deck, { button: 0, clientY: 240, pointerId: 3 });
+    fireEvent.pointerMove(deck, { clientY: 50, pointerId: 3 });
+    expect(rail.scrollTop).toBe(124);
+    fireEvent.pointerUp(deck, { clientY: 50, pointerId: 3 });
+  });
+
   it("keeps the journal editor focused on the essential fields", async () => {
     render(<JournalWorkspace />);
     await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });

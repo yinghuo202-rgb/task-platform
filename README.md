@@ -238,14 +238,14 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从旧版本在线更新到 v1.10.1
+### 从旧版本在线更新到 v1.11.0
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.10.1
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.10.1
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.10.1
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.11.0
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.11.0
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.11.0
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
@@ -255,6 +255,8 @@ API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.10.1
 v1.10.0 为首页日历内置中国历并默认开启，覆盖法定节假日、调休上班、二十四节气和常用传统节日；计算在浏览器本地完成，NAS 运行时不依赖外网。工具栏可随时隐藏中国历，选择会保存在当前设备。法定节假日数据应在国务院发布下一年度安排后随应用版本更新。
 
 v1.10.1 将手帐时光流的历史时间轴移到左侧，桌面端和手机端的拖动、日期标记与当前日期提示保持一致。
+
+v1.11.0 将手帐历史时间轴恢复到右侧，并支持直接在手帐卡片区域使用鼠标滚轮、触控上下滑动或拖拽浏览；滑动位置逐帧跟随，当前篇在手势停下后再确认并加载，同时减少正文重复计算、移动卡片模糊和追赶动画，改善手机与远程访问下的流畅度。
 
 v1.2.9 兼容极空间本机转发端口动态变化：`127.0.0.1`/`localhost` 的任意端口都会被识别为本机远程访问来源，手机登录不再受临时端口变化影响。
 

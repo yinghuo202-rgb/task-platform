@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- journal images are authenticated same-origin assets with imported dimensions */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, FileDown, FileText, MessageCircle, PenLine, Plus, Send, Trash2, X } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { Button, Field, Input, Textarea } from "./ui";
@@ -21,6 +21,8 @@ const emptyEditor = (): EditorState => ({ id: null, version: 1, type: "JOURNAL",
 const JOURNAL_TICK_HEIGHT = 24;
 const JOURNAL_TICK_WINDOW = 160;
 const JOURNAL_DETAIL_CACHE_TTL = 30_000;
+const JOURNAL_STREAM_COMMIT_DELAY = 80;
+const JOURNAL_CARD_DRAG_RATIO = JOURNAL_TICK_HEIGHT / 190;
 
 export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string } = {}) {
   const [records, setRecords] = useState<EntryIndex[]>([]);
@@ -51,6 +53,9 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const entryRequestRef = useRef(0);
   const commentsRequestRef = useRef(0);
   const railAnimationRef = useRef<number | null>(null);
+  const streamCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeIndexRef = useRef(0);
+  const streamPositionRef = useRef(0);
   const entryCacheRef = useRef(new Map<string, CachedValue<Entry>>());
   const commentsCacheRef = useRef(new Map<string, CachedValue<EntryComment[]>>());
   const currentRecordIdRef = useRef<string | undefined>(undefined);
@@ -62,7 +67,8 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
 
   useEffect(() => {
     currentRecordIdRef.current = currentRecordId;
-  }, [currentRecordId]);
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex, currentRecordId]);
 
   const loadIndex = useCallback(async (preferredId?: string) => {
     setLoading(true);
@@ -72,6 +78,8 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       setRecords(response.data.records);
       setCanImport(response.data.canImport);
       const nextIndex = preferredId ? Math.max(0, response.data.records.findIndex((record) => record.id === preferredId)) : 0;
+      activeIndexRef.current = nextIndex;
+      streamPositionRef.current = nextIndex;
       setActiveIndex(nextIndex);
       setStreamPosition(nextIndex);
     } catch (err) {
@@ -132,6 +140,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     commentsAbortRef.current?.abort();
     streamBatchAbortRef.current?.abort();
     if (railAnimationRef.current != null) cancelAnimationFrame(railAnimationRef.current);
+    if (streamCommitTimerRef.current) clearTimeout(streamCommitTimerRef.current);
   }, []);
   useEffect(() => {
     if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
@@ -211,6 +220,9 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     const nextId = records[nextIndex]?.id;
     const cachedEntry = nextId ? entryCacheRef.current.get(nextId) : undefined;
     const cachedComments = nextId ? commentsCacheRef.current.get(nextId) : undefined;
+    if (streamCommitTimerRef.current) clearTimeout(streamCommitTimerRef.current);
+    activeIndexRef.current = nextIndex;
+    streamPositionRef.current = nextIndex;
     setActiveIndex(nextIndex);
     setStreamPosition(nextIndex);
     setSelected(cachedEntry?.value ?? null);
@@ -236,17 +248,16 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       const progress = maxScroll === 0 ? 0 : rail.scrollTop / maxScroll;
       const nextPosition = Math.min(records.length - 1, Math.max(0, progress * (records.length - 1)));
       const nextIndex = Math.round(nextPosition);
-      setStreamPosition(nextPosition);
-      if (nextIndex !== activeIndex) {
-        const nextId = records[nextIndex]?.id;
-        const cachedEntry = nextId ? entryCacheRef.current.get(nextId) : undefined;
-        const cachedComments = nextId ? commentsCacheRef.current.get(nextId) : undefined;
-        setActiveIndex(nextIndex);
-        setSelected(cachedEntry?.value ?? null);
-        setComments(cachedComments?.value ?? []);
-        setDetailLoading(!cachedEntry);
-        setCommentsLoading(!cachedComments);
+      if (Math.abs(nextPosition - streamPositionRef.current) > 0.001) {
+        streamPositionRef.current = nextPosition;
+        setStreamPosition(nextPosition);
       }
+      if (streamCommitTimerRef.current) clearTimeout(streamCommitTimerRef.current);
+      if (nextIndex === activeIndexRef.current) return;
+      streamCommitTimerRef.current = setTimeout(() => {
+        activeIndexRef.current = nextIndex;
+        setActiveIndex((current) => current === nextIndex ? current : nextIndex);
+      }, JOURNAL_STREAM_COMMIT_DELAY);
     });
   };
 
@@ -405,34 +416,69 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     {error && <div className="form-message" role="alert">{error}</div>}
     {notice && <div className="form-message success" role="status">{notice}</div>}
     {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : <>
-      {view === "stream" && <StreamView records={records} activeIndex={activeIndex} position={streamPosition} entries={entryDetails} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={(entry) => openEditor(entry)} onOpenReader={() => setView("reader")} />}
+      {view === "stream" && <StreamView records={records} position={streamPosition} entries={entryDetails} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={(entry) => openEditor(entry)} onOpenReader={() => setView("reader")} />}
       {view === "reader" && <ReaderView activeIndex={activeIndex} count={records.length} entry={currentEntry} loading={detailLoading} comments={comments} commentsLoading={commentsLoading} commentAnchor={commentAnchor} commentValue={commentText} commentSaving={commentSaving} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onRequestComment={setCommentAnchor} onCancelComment={() => { setCommentAnchor(null); setCommentText(""); }} onCommentChange={setCommentText} onCommentSubmit={submitComment} onRemoveComment={(id) => void removeComment(id)} />}
     </>}
     {editor && <EntryEditor editor={editor} saving={saving} onChange={setEditor} onClose={() => setEditor(null)} onDelete={() => void removeEntry()} onSubmit={saveEntry} />}
   </div></section>;
 }
 
-function StreamView({ records, activeIndex, position, entries, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onRetry, onEdit, onOpenReader }: {
-  records: EntryIndex[]; activeIndex: number; position: number; entries: Record<string, Entry>; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: (entry: Entry) => void; onOpenReader: () => void;
+function StreamView({ records, position, entries, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onRetry, onEdit, onOpenReader }: {
+  records: EntryIndex[]; position: number; entries: Record<string, Entry>; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: (entry: Entry) => void; onOpenReader: () => void;
 }) {
-  const currentRecord = records[activeIndex];
-  const windowStart = Math.max(0, Math.min(records.length - JOURNAL_TICK_WINDOW, activeIndex - Math.floor(JOURNAL_TICK_WINDOW / 2)));
+  const deckGestureRef = useRef<{ y: number; scrollTop: number; moved: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
+  const visualIndex = Math.min(records.length - 1, Math.max(0, Math.round(position)));
+  const currentRecord = records[visualIndex];
+  const windowStart = Math.max(0, Math.min(records.length - JOURNAL_TICK_WINDOW, visualIndex - Math.floor(JOURNAL_TICK_WINDOW / 2)));
   const visibleRecords = records.slice(windowStart, windowStart + JOURNAL_TICK_WINDOW);
   const cardStart = Math.max(0, Math.floor(position) - 2);
   const cardEnd = Math.min(records.length, Math.ceil(position) + 3);
   const cards = records.slice(cardStart, cardEnd).map((record, offset) => ({ record, index: cardStart + offset }));
   const activateCard = (index: number, entry: Entry | undefined, target: EventTarget | null) => {
-    if (!entry || (target as HTMLElement | null)?.closest("button, a, input, textarea, select")) return;
-    if (index === activeIndex) onOpenReader();
+    if (suppressClickRef.current || !entry || (target as HTMLElement | null)?.closest("button, a, input, textarea, select")) return;
+    if (index === visualIndex) onOpenReader();
     else onSelect(index);
   };
+  const onDeckWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const rail = railRef.current;
+    if (!rail) return;
+    event.preventDefault();
+    const pixels = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaMode === 2 ? event.deltaY * rail.clientHeight : event.deltaY;
+    rail.scrollTop += pixels * 0.35;
+  };
+  const onDeckPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button, a, input, textarea, select")) return;
+    const rail = railRef.current;
+    if (!rail || event.button !== 0) return;
+    suppressClickRef.current = false;
+    deckGestureRef.current = { y: event.clientY, scrollTop: rail.scrollTop, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const onDeckPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rail = railRef.current;
+    const gesture = deckGestureRef.current;
+    if (!rail || !gesture || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const delta = event.clientY - gesture.y;
+    if (Math.abs(delta) > 4) gesture.moved = true;
+    if (gesture.moved) rail.scrollTop = gesture.scrollTop - delta * JOURNAL_CARD_DRAG_RATIO;
+  };
+  const onDeckPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const moved = deckGestureRef.current?.moved ?? false;
+    deckGestureRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (moved) {
+      suppressClickRef.current = true;
+      window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+    }
+  };
   return <div className="journal-stream-stage">
-    <div className="journal-stream-meta"><strong>{currentRecord ? formatDate(currentRecord.entryDate) : "选择一天"}</strong><span>{activeIndex + 1} / {records.length} 条记录</span></div>
-    <div className="journal-stream-deck" aria-label="手帐时光流">{cards.map(({ record, index }) => {
+    <div className="journal-stream-meta"><strong>{currentRecord ? formatDate(currentRecord.entryDate) : "选择一天"}</strong><span>{visualIndex + 1} / {records.length} 条记录</span></div>
+    <div className="journal-stream-deck" aria-label="手帐时光流，可上下滑动" onWheel={onDeckWheel} onPointerDown={onDeckPointerDown} onPointerMove={onDeckPointerMove} onPointerUp={onDeckPointerUp} onPointerCancel={onDeckPointerUp}>{cards.map(({ record, index }) => {
       const entry = entries[record.id];
       const distance = index - position;
       const edgeDistance = Math.abs(distance);
-      const active = index === activeIndex;
+      const active = index === visualIndex;
       const style = {
         opacity: Math.max(0.06, 1 - edgeDistance * 0.31),
         transform: `translateY(calc(-50% + ${distance * 190}px)) scale(${Math.max(0.91, 1 - edgeDistance * 0.025)})`,
@@ -468,12 +514,12 @@ function StreamView({ records, activeIndex, position, entries, detailLoading, ra
         </>}
       </article>;
     })}</div>
-    <p className="journal-drag-hint"><span aria-hidden="true">↕</span>拖动左侧历史轴，查看全部记录</p>
+    <p className="journal-drag-hint"><span aria-hidden="true">↕</span>上下滑动手帐，或拖动右侧历史轴</p>
     <aside className="journal-history-rail" aria-label="全部手帐历史">
       <div className="journal-history-line" aria-hidden="true" />
       <div className="journal-history-viewport" ref={railRef} onScroll={onScroll} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
         <div className="journal-history-spacer" aria-hidden="true" />
-        <div className="journal-history-items" style={{ height: records.length * JOURNAL_TICK_HEIGHT }}>{visibleRecords.map((record, offset) => { const index = windowStart + offset; return <button key={record.id} type="button" style={{ top: index * JOURNAL_TICK_HEIGHT }} aria-label={`${formatDate(record.entryDate)}，${record.createdBy.displayName}：${record.title}`} className={`journal-history-tick${index === activeIndex ? " active" : ""}`} onClick={() => onSelect(index)}><span>{isMonthStart(record, index, records) ? formatMonth(record.entryDate) : ""}</span><i /></button>; })}</div>
+        <div className="journal-history-items" style={{ height: records.length * JOURNAL_TICK_HEIGHT }}>{visibleRecords.map((record, offset) => { const index = windowStart + offset; return <button key={record.id} type="button" style={{ top: index * JOURNAL_TICK_HEIGHT }} aria-label={`${formatDate(record.entryDate)}，${record.createdBy.displayName}：${record.title}`} className={`journal-history-tick${index === visualIndex ? " active" : ""}`} onClick={() => onSelect(index)}><span>{isMonthStart(record, index, records) ? formatMonth(record.entryDate) : ""}</span><i /></button>; })}</div>
         <div className="journal-history-spacer" aria-hidden="true" />
       </div>
       <span className="journal-history-selection" aria-hidden="true">{currentRecord ? shortDate(currentRecord.entryDate) : "—"}</span>
@@ -658,14 +704,14 @@ function EntryEditor({ editor, saving, onChange, onClose, onDelete, onSubmit }: 
   return <div className="journal-editor-backdrop"><section className="journal-editor" role="dialog" aria-modal="true" aria-labelledby="journal-editor-title"><header><div><span className="eyebrow">WRITE IT DOWN</span><h2 id="journal-editor-title">{editor.id ? "编辑手帐" : "写手帐"}</h2></div><button type="button" aria-label="关闭" onClick={onClose}><X size={19} /></button></header><form className="form-stack" onSubmit={onSubmit}><Field label="标题" required><Input autoFocus value={editor.title} onChange={(event) => onChange({ ...editor, title: event.target.value })} placeholder="例如：周末一起去散步" maxLength={160} /></Field><Field label="日期" required><Input type="date" value={editor.entryDate} onChange={(event) => onChange({ ...editor, entryDate: event.target.value })} /></Field><Field label="正文"><Textarea className="journal-editor-textarea" value={editor.contentMarkdown} onChange={(event) => onChange({ ...editor, contentMarkdown: event.target.value })} placeholder="写下今天发生的事，也可以直接粘贴 Markdown" maxLength={100000} /></Field><div className="journal-editor-actions">{editor.id && <Button className="danger" disabled={saving} type="button" onClick={onDelete}>移入归档</Button>}<span /><Button className="secondary" type="button" onClick={onClose}>取消</Button><Button disabled={saving} type="submit">{saving ? "保存中…" : "保存"}</Button></div></form></section></div>;
 }
 
-function MarkdownPreview({ value, compact = false }: { value: string; compact?: boolean }) {
+const MarkdownPreview = memo(function MarkdownPreview({ value, compact = false }: { value: string; compact?: boolean }) {
   if (compact) {
     const plain = value.replace(/```[\s\S]*?```/g, "").replace(/!\[[^\]]*\]\([^)]+\)/g, "[图片]").replace(/^#{1,6}\s+/gm, "").replace(/^[-*>]\s+/gm, "").replace(/\n+/g, " ").trim() || "还没有写下正文。";
     return <div className="journal-markdown compact"><p>{plain}</p></div>;
   }
   const blocks = parseMarkdown(value);
   return <div className="journal-markdown rich">{blocks.map((block, index) => renderMarkdownBlock(block, `${block.type}-${index}`))}</div>;
-}
+});
 
 type MarkdownBlock = { type: "heading"; level: number; text: string } | { type: "quote"; text: string } | { type: "list"; ordered: boolean; items: string[] } | { type: "image"; alt: string; src: string } | { type: "code"; text: string } | { type: "rule" } | { type: "paragraph"; text: string };
 function renderMarkdownBlock(block: MarkdownBlock, key: string) {

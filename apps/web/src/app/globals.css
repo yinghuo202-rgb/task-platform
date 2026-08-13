@@ -854,15 +854,16 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .journal-toolbar { justify-content: space-between; gap: 16px; padding: 9px 10px; border: 1px solid rgb(255 255 255 / 76%); border-radius: 16px; background: rgb(255 255 255 / 48%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 82%), 0 12px 34px rgb(73 94 84 / 7%); backdrop-filter: blur(22px) saturate(135%); }
 .journal-view-tabs button { min-height: 34px; padding: 6px 11px; border: 0; border-radius: 10px; color: var(--muted); background: transparent; cursor: pointer; }
 .journal-view-tabs button.active { color: var(--ink-strong); background: var(--accent); font-weight: 750; }
-.journal-stream-stage { position: relative; min-height: 690px; padding: 18px 0 0 48px; }
+.journal-stream-stage { position: relative; min-height: 690px; padding: 18px 48px 0 0; }
 .journal-stream-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; color: var(--muted); font-size: .82rem; }
 .journal-stream-meta strong { color: var(--ink-strong); font-size: 1rem; }
-.journal-stream-deck { position: relative; height: 610px; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 11%, black 89%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, black 11%, black 89%, transparent 100%); }
+.journal-stream-deck { position: relative; height: 610px; overflow: hidden; cursor: grab; touch-action: pan-x; user-select: none; -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 11%, black 89%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, black 11%, black 89%, transparent 100%); }
+.journal-stream-deck:active { cursor: grabbing; }
 .journal-entry-card { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) 168px; gap: 22px; min-height: 270px; padding: 26px; overflow: hidden; border: 1px solid rgb(255 255 255 / 82%); border-radius: 26px 26px 26px 10px; background: linear-gradient(135deg, rgb(255 255 255 / 78%), rgb(248 253 249 / 55%)); box-shadow: 0 24px 70px rgb(65 78 67 / 12%), inset 0 1px 0 rgb(255 255 255 / 96%), inset 0 -1px 0 rgb(164 188 176 / 12%); backdrop-filter: blur(26px) saturate(145%); }
 .journal-entry-card[role="button"] { cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
 .journal-entry-card[role="button"]:hover { border-color: rgb(122 164 145 / 42%); box-shadow: 0 27px 74px rgb(65 78 67 / 15%), inset 0 1px 0 rgb(255 255 255 / 96%), inset 0 -1px 0 rgb(164 188 176 / 12%); transform: translateY(-1px); }
 .journal-entry-card[role="button"]:focus-visible { outline: 3px solid rgb(92 139 118 / 28%); outline-offset: 3px; }
-.journal-stream-card { position: absolute; top: 38%; right: 5px; left: 0; grid-template-columns: minmax(0, 1fr) 132px; min-height: 210px; max-height: 232px; padding: 20px 22px; transform-origin: center; transition: opacity .12s linear, transform .16s cubic-bezier(.2, .7, .2, 1), border-color .16s, box-shadow .16s; will-change: transform, opacity; }
+.journal-stream-card { position: absolute; top: 38%; right: 5px; left: 0; contain: layout paint style; grid-template-columns: minmax(0, 1fr) 132px; min-height: 210px; max-height: 232px; padding: 20px 22px; transform-origin: center; transition: opacity .07s linear, border-color .12s, box-shadow .12s; will-change: transform, opacity; backdrop-filter: none; }
 .journal-stream-card.active { border-color: rgb(122 164 145 / 45%); box-shadow: 0 22px 58px rgb(65 78 67 / 14%), inset 0 1px 0 rgb(255 255 255 / 96%); }
 .journal-stream-card:not(.active) { filter: saturate(.88); }
 .journal-stream-card .journal-entry-art { min-height: 150px; }
@@ -901,17 +902,17 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .journal-entry-loading { display: grid; place-items: center; min-height: 200px; color: var(--muted); }
 .journal-entry-loading button, .journal-reader-loading button { padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--brand); background: rgb(255 255 255 / 66%); cursor: pointer; }
 .journal-drag-hint { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; color: var(--muted); font-size: .78rem; }
-.journal-history-rail { position: absolute; top: 48px; bottom: 30px; left: -4px; width: 34px; }
+.journal-history-rail { position: absolute; top: 48px; right: -4px; bottom: 30px; width: 34px; }
 .journal-history-line { position: absolute; top: 10px; bottom: 10px; left: 15px; width: 2px; border-radius: 999px; background: var(--line); }
-.journal-history-viewport { position: absolute; inset: 0 -10px 0 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; touch-action: pan-y; cursor: grab; }
+.journal-history-viewport { position: absolute; inset: 0 0 0 -10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; touch-action: pan-y; cursor: grab; }
 .journal-history-viewport:active { cursor: grabbing; }
 .journal-history-spacer { height: calc(50% - 12px); min-height: 120px; }
 .journal-history-items { position: relative; }
-.journal-history-tick { position: absolute; right: 0; left: 0; display: flex; align-items: center; justify-content: flex-start; width: 100%; height: 24px; padding: 0; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
-.journal-history-tick span { position: absolute; left: 24px; width: max-content; color: var(--muted); font-size: .58rem; pointer-events: none; }
+.journal-history-tick { position: absolute; right: 0; left: 0; display: flex; align-items: center; justify-content: flex-end; width: 100%; height: 24px; padding: 0; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
+.journal-history-tick span { position: absolute; right: 24px; width: max-content; color: var(--muted); font-size: .58rem; pointer-events: none; }
 .journal-history-tick i { display: block; width: 7px; height: 1px; border-radius: 1px; background: var(--green); }
 .journal-history-tick.active i { width: 13px; height: 2px; background: var(--brand); }
-.journal-history-selection { position: absolute; top: 50%; left: 21px; z-index: 3; padding: 2px 4px; border-radius: 5px; color: var(--ink-strong); background: var(--accent); font-size: .65rem; white-space: nowrap; transform: translateY(-50%); pointer-events: none; }
+.journal-history-selection { position: absolute; top: 50%; right: 21px; z-index: 3; padding: 2px 4px; border-radius: 5px; color: var(--ink-strong); background: var(--accent); font-size: .65rem; white-space: nowrap; transform: translateY(-50%); pointer-events: none; }
 .journal-reader-shell { overflow: hidden; padding: 2px 2px 0; }
 .journal-reader { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(210px, .62fr) minmax(0, 1.38fr); overflow: hidden; border: 1px solid rgb(255 255 255 / 82%); border-radius: 28px 28px 28px 10px; outline: none; background: rgb(255 255 255 / 66%); box-shadow: 0 26px 76px rgb(65 78 67 / 13%), inset 0 1px 0 rgb(255 255 255 / 92%); backdrop-filter: blur(28px) saturate(145%); touch-action: pan-y; transition: transform .22s ease, opacity .22s ease, box-shadow .22s ease; }
 .journal-reader:focus-visible { box-shadow: 0 0 0 3px var(--brand-soft), 0 26px 76px rgb(65 78 67 / 13%); }
@@ -979,14 +980,14 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
   .journal-toolbar { align-items: stretch; flex-direction: column; }
   .journal-view-tabs { width: 100%; }
   .journal-view-tabs button { flex: 1; }
-  .journal-stream-stage { min-height: 630px; padding-right: 0; padding-left: 36px; }
+  .journal-stream-stage { min-height: 630px; padding-right: 36px; padding-left: 0; }
   .journal-stream-deck { height: 550px; }
   .journal-entry-card { grid-template-columns: 1fr; }
   .journal-stream-card { min-height: 190px; max-height: 214px; padding: 17px; }
   .journal-entry-art { min-height: 100px; }
   .journal-stream-card .journal-entry-art { display: none; }
-  .journal-history-rail { right: auto; left: -8px; width: 28px; }
-  .journal-history-viewport { right: -16px; left: 0; }
+  .journal-history-rail { right: -8px; left: auto; width: 28px; }
+  .journal-history-viewport { right: 0; left: -16px; }
   .journal-history-tick span { display: none; }
   .journal-reader { grid-template-columns: 1fr; }
   .journal-reader > aside { min-height: 190px; }
