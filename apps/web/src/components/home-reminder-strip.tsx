@@ -4,9 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Bell, CalendarClock, ChevronRight, ListPlus, NotebookPen } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { notificationTarget } from "@/lib/notification-target";
 
 type NotificationSummary = {
   id: string;
+  taskId?: string | null;
+  targetPath?: string | null;
   type: string;
   title: string;
   content: string;
@@ -24,6 +27,8 @@ type ReminderItem = {
   kind: "schedule" | "journal" | "task" | "notice";
   text: string;
   detail: string;
+  href: string;
+  notificationId?: string;
 };
 
 export function HomeReminderStrip({ upcoming }: { upcoming?: UpcomingSchedule | null }) {
@@ -52,23 +57,30 @@ export function HomeReminderStrip({ upcoming }: { upcoming?: UpcomingSchedule | 
   }, [load]);
 
   const reminders = useMemo(() => buildReminderItems(upcoming, notifications), [notifications, upcoming]);
+  const markRead = (id: string) => {
+    const notification = notifications.find((item) => item.id === id);
+    if (!notification || notification.readAt) return;
+    setNotifications((current) => current.map((item) => item.id === id ? { ...item, readAt: new Date().toISOString() } : item));
+    setUnread((current) => Math.max(0, current - 1));
+    void apiFetch(`/notifications/${id}/read`, { method: "POST" }).catch(() => void load());
+  };
 
-  return <Link className="home-reminder-strip" href="/notifications" aria-label="打开即时提醒">
-    <span className="home-reminder-label"><span className="home-reminder-bell"><Bell size={16} />{unread > 0 && <i />}</span><strong>即时提醒</strong>{unread > 0 && <b>{unread > 99 ? "99+" : unread}</b>}</span>
+  return <section className="home-reminder-strip" aria-label="即时提醒">
+    <Link className="home-reminder-label" href="/notifications"><span className="home-reminder-bell"><Bell size={16} />{unread > 0 && <i />}</span><strong>即时提醒</strong>{unread > 0 && <b>{unread > 99 ? "99+" : unread}</b>}</Link>
     <span className="home-reminder-items">
-      {reminders.length ? reminders.map((item) => <span className={`home-reminder-item ${item.kind}`} key={item.id}>
+      {reminders.length ? reminders.map((item) => <Link className={`home-reminder-item ${item.kind}`} href={item.href} key={item.id} onClick={() => { if (item.notificationId) markRead(item.notificationId); }}>
         <ReminderIcon kind={item.kind} />
         <span><strong>{item.text}</strong><small>{item.detail}</small></span>
-      </span>) : <span className="home-reminder-empty">暂时没有需要处理的提醒</span>}
+      </Link>) : <span className="home-reminder-empty">暂时没有需要处理的提醒</span>}
     </span>
-    <ChevronRight className="home-reminder-next" size={18} />
-  </Link>;
+    <Link className="home-reminder-next" href="/notifications" aria-label="查看全部提醒"><ChevronRight size={18} /></Link>
+  </section>;
 }
 
 export function buildReminderItems(upcoming: UpcomingSchedule | null | undefined, notifications: NotificationSummary[]): ReminderItem[] {
   const result: ReminderItem[] = [];
   if (upcoming) {
-    result.push({ id: "upcoming-schedule", kind: "schedule", text: upcoming.title, detail: scheduleTimeLabel(upcoming.startsAt) });
+    result.push({ id: "upcoming-schedule", kind: "schedule", text: upcoming.title, detail: scheduleTimeLabel(upcoming.startsAt), href: "/dashboard" });
   }
 
   const candidates = notifications.filter((item) => !item.readAt).length
@@ -84,6 +96,8 @@ export function buildReminderItems(upcoming: UpcomingSchedule | null | undefined
       kind,
       text: notification.content || notification.title,
       detail: notification.title,
+      href: notificationTarget(notification),
+      notificationId: notification.id,
     });
     if (result.length >= 3) break;
   }

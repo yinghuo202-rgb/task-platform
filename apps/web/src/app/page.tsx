@@ -14,7 +14,7 @@ export default function Home() {
       <div className="hero-copy">
         <span className="eyebrow">LA VIE · OUR LITTLE SPACE</span>
         <h1>把日子一起<br />过好。</h1>
-        <p>安排时间、写下手帐、记住那些值得重看的瞬间。这里是只属于两个人的生活空间。</p>
+        <p>安排时间、写下手帐、记住那些值得重看的瞬间。</p>
         <div className="button-row"><Link className="button" href="/login">进入 la vie <ArrowRight size={18} /></Link><Link className="button secondary" href="/register">凭邀请码加入</Link></div>
         <div className="hero-principles"><span><CalendarDays size={15} />日程放在一起</span><span><PenLine size={15} />手帐在线保存</span><span><Heart size={15} />只和对方分享</span></div>
       </div>

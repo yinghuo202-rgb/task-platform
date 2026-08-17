@@ -533,16 +533,17 @@ model TaskComment {
 }
 
 model Notification {
-  id        String           @id @default(uuid()) @db.Uuid
-  userId    String           @db.Uuid
-  taskId    String?          @db.Uuid
-  type      NotificationType
-  title     String           @db.VarChar(200)
-  content   String           @db.VarChar(1000)
-  readAt    DateTime?        @db.Timestamptz(3)
-  createdAt DateTime         @default(now()) @db.Timestamptz(3)
-  user      User             @relation(fields: [userId], references: [id], onDelete: Restrict)
-  task      Task?            @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  id         String           @id @default(uuid()) @db.Uuid
+  userId     String           @db.Uuid
+  taskId     String?          @db.Uuid
+  targetPath String?          @db.VarChar(500)
+  type       NotificationType
+  title      String           @db.VarChar(200)
+  content    String           @db.VarChar(1000)
+  readAt     DateTime?        @db.Timestamptz(3)
+  createdAt  DateTime         @default(now()) @db.Timestamptz(3)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  task       Task?            @relation(fields: [taskId], references: [id], onDelete: Restrict)
 
   @@index([userId, readAt])
   @@map("notifications")

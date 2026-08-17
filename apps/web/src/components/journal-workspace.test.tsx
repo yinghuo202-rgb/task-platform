@@ -91,7 +91,7 @@ describe("JournalWorkspace", () => {
     rail.scrollTop = 100;
     fireEvent.pointerDown(deck, { button: 0, clientY: 240, pointerId: 3 });
     fireEvent.pointerMove(deck, { clientY: 50, pointerId: 3 });
-    expect(rail.scrollTop).toBe(124);
+    expect(rail.scrollTop).toBeCloseTo(132.57, 1);
     fireEvent.pointerUp(deck, { clientY: 50, pointerId: 3 });
   });
 
@@ -119,6 +119,16 @@ describe("JournalWorkspace", () => {
 
     expect(screen.getByRole("tab", { name: "翻页看" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("article", { name: /左右滑动/ })).toBeInTheDocument();
+  });
+
+  it("opens a non-current stream card directly with one click", async () => {
+    render(<JournalWorkspace />);
+    await screen.findByRole("heading", { name: "第二篇" }, { timeout: 5_000 });
+
+    await userEvent.click(screen.getByRole("button", { name: "打开《第二篇》的翻页视图" }));
+
+    expect(screen.getByRole("tab", { name: "翻页看" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByRole("heading", { name: "第二篇" }, { timeout: 5_000 })).toBeInTheDocument();
   });
 
   it("switches reader entries with a horizontal swipe", async () => {

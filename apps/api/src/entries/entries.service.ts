@@ -128,7 +128,13 @@ export class EntriesService {
       });
       if (recipients.length) {
         await tx.notification.createMany({
-          data: recipients.map(({ userId }) => ({ userId, type: "SYSTEM" as const, title: "手帐有新内容", content: created.title })),
+          data: recipients.map(({ userId }) => ({
+            userId,
+            type: "SYSTEM" as const,
+            title: "手帐有新内容",
+            content: created.title,
+            targetPath: `/journal?entry=${created.id}`,
+          })),
         });
       }
       return created;
@@ -169,7 +175,13 @@ export class EntriesService {
       });
       if (recipients.length) {
         await tx.notification.createMany({
-          data: recipients.map(({ userId }) => ({ userId, type: "SYSTEM" as const, title: "手帐已更新", content: updated.title })),
+          data: recipients.map(({ userId }) => ({
+            userId,
+            type: "SYSTEM" as const,
+            title: "手帐已更新",
+            content: updated.title,
+            targetPath: `/journal?entry=${updated.id}`,
+          })),
         });
       }
       return updated;

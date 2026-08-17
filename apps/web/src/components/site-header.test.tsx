@@ -11,5 +11,7 @@ describe("SiteHeader", () => {
     expect(nav.querySelectorAll("a")).toHaveLength(4);
     expect(screen.queryByRole("link", { name: /项目/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "我们" })).not.toBeInTheDocument();
+    expect(screen.queryByText("la vie")).not.toBeInTheDocument();
+    expect(screen.queryByText("两个人的生活空间")).not.toBeInTheDocument();
   });
 });

@@ -34,7 +34,7 @@ const weekLabels = ["周一", "周二", "周三", "周四", "周五", "周六", 
 const colors = ["#8f86b7", "#c98f9f", "#79a89b", "#c9a36d", "#7f9db8"];
 const CHINA_CALENDAR_SETTING = "la-vie:china-calendar";
 
-export function CalendarWorkspace() {
+export function CalendarWorkspace({ openSubscriptions = false }: { openSubscriptions?: boolean }) {
   const [anchor, setAnchor] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
   const [view, setView] = useState<CalendarView>("month");
@@ -49,7 +49,7 @@ export function CalendarWorkspace() {
   const [form, setForm] = useState<EventForm>(() => eventFormFor(new Date()));
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(openSubscriptions);
   const [subscriptionBusy, setSubscriptionBusy] = useState("");
   const [showChinaCalendar, setShowChinaCalendar] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
