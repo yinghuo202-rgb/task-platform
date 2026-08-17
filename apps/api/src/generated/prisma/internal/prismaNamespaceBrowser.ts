@@ -401,6 +401,7 @@ export const NotificationScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   taskId: 'taskId',
+  targetPath: 'targetPath',
   type: 'type',
   title: 'title',
   content: 'content',

@@ -21,8 +21,8 @@ const emptyEditor = (): EditorState => ({ id: null, version: 1, type: "JOURNAL",
 const JOURNAL_TICK_HEIGHT = 24;
 const JOURNAL_TICK_WINDOW = 160;
 const JOURNAL_DETAIL_CACHE_TTL = 30_000;
-const JOURNAL_STREAM_COMMIT_DELAY = 80;
-const JOURNAL_CARD_DRAG_RATIO = JOURNAL_TICK_HEIGHT / 190;
+const JOURNAL_STREAM_COMMIT_DELAY = 32;
+const JOURNAL_CARD_DRAG_RATIO = JOURNAL_TICK_HEIGHT / 140;
 
 export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string } = {}) {
   const [records, setRecords] = useState<EntryIndex[]>([]);
@@ -416,7 +416,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     {error && <div className="form-message" role="alert">{error}</div>}
     {notice && <div className="form-message success" role="status">{notice}</div>}
     {loading ? <div className="loading">正在整理时间线…</div> : !records.length ? <div className="empty"><BookOpen size={30} /><h2>还没有手帐</h2><p>写下第一篇，给今天留一个小小的标记。</p><Button onClick={() => openEditor()}><Plus size={16} />写第一篇</Button></div> : <>
-      {view === "stream" && <StreamView records={records} position={streamPosition} entries={entryDetails} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={(entry) => openEditor(entry)} onOpenReader={() => setView("reader")} />}
+      {view === "stream" && <StreamView records={records} position={streamPosition} entries={entryDetails} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={(entry) => openEditor(entry)} onOpenReader={(index) => { selectIndex(index); setView("reader"); }} />}
       {view === "reader" && <ReaderView activeIndex={activeIndex} count={records.length} entry={currentEntry} loading={detailLoading} comments={comments} commentsLoading={commentsLoading} commentAnchor={commentAnchor} commentValue={commentText} commentSaving={commentSaving} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onRequestComment={setCommentAnchor} onCancelComment={() => { setCommentAnchor(null); setCommentText(""); }} onCommentChange={setCommentText} onCommentSubmit={submitComment} onRemoveComment={(id) => void removeComment(id)} />}
     </>}
     {editor && <EntryEditor editor={editor} saving={saving} onChange={setEditor} onClose={() => setEditor(null)} onDelete={() => void removeEntry()} onSubmit={saveEntry} />}
@@ -424,7 +424,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
 }
 
 function StreamView({ records, position, entries, detailLoading, railRef, onSelect, onScroll, onPointerDown, onPointerMove, onPointerUp, onRetry, onEdit, onOpenReader }: {
-  records: EntryIndex[]; position: number; entries: Record<string, Entry>; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: (entry: Entry) => void; onOpenReader: () => void;
+  records: EntryIndex[]; position: number; entries: Record<string, Entry>; detailLoading: boolean; railRef: React.RefObject<HTMLDivElement | null>; onSelect: (index: number) => void; onScroll: () => void; onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLDivElement>) => void; onRetry: () => void; onEdit: (entry: Entry) => void; onOpenReader: (index: number) => void;
 }) {
   const deckGestureRef = useRef<{ y: number; scrollTop: number; moved: boolean } | null>(null);
   const suppressClickRef = useRef(false);
@@ -435,10 +435,9 @@ function StreamView({ records, position, entries, detailLoading, railRef, onSele
   const cardStart = Math.max(0, Math.floor(position) - 2);
   const cardEnd = Math.min(records.length, Math.ceil(position) + 3);
   const cards = records.slice(cardStart, cardEnd).map((record, offset) => ({ record, index: cardStart + offset }));
-  const activateCard = (index: number, entry: Entry | undefined, target: EventTarget | null) => {
-    if (suppressClickRef.current || !entry || (target as HTMLElement | null)?.closest("button, a, input, textarea, select")) return;
-    if (index === visualIndex) onOpenReader();
-    else onSelect(index);
+  const activateCard = (index: number, target: EventTarget | null) => {
+    if (suppressClickRef.current || (target as HTMLElement | null)?.closest("button, a, input, textarea, select")) return;
+    onOpenReader(index);
   };
   const onDeckWheel = (event: React.WheelEvent<HTMLDivElement>) => {
     const rail = railRef.current;
@@ -460,7 +459,7 @@ function StreamView({ records, position, entries, detailLoading, railRef, onSele
     const gesture = deckGestureRef.current;
     if (!rail || !gesture || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
     const delta = event.clientY - gesture.y;
-    if (Math.abs(delta) > 4) gesture.moved = true;
+    if (Math.abs(delta) > 8) gesture.moved = true;
     if (gesture.moved) rail.scrollTop = gesture.scrollTop - delta * JOURNAL_CARD_DRAG_RATIO;
   };
   const onDeckPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -486,17 +485,14 @@ function StreamView({ records, position, entries, detailLoading, railRef, onSele
       };
       return <article
         aria-current={active ? "true" : undefined}
-        aria-label={entry ? active ? `打开《${entry.title}》的翻页视图` : `选择《${entry.title}》` : `${record.title}正在载入`}
+        aria-label={`打开《${record.title}》的翻页视图`}
         className={`journal-entry-card journal-stream-card${active ? " active" : ""}`}
         key={record.id}
-        onClick={(event) => activateCard(index, entry, event.target)}
+        onClick={(event) => activateCard(index, event.target)}
         onKeyDown={(event) => {
           if ((event.key === "Enter" || event.key === " ") && !(event.target as HTMLElement).closest("button, a, input, textarea, select")) {
             event.preventDefault();
-            if (entry) {
-              if (active) onOpenReader();
-              else onSelect(index);
-            }
+            onOpenReader(index);
           }
         }}
         role="button"

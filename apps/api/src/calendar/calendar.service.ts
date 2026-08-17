@@ -122,6 +122,7 @@ export class CalendarService {
         type: "SYSTEM",
         title: "新的日历订阅申请",
         content: `${subscriber?.displayName ?? "一位项目成员"} 希望订阅你的日历，请前往“我的日历”处理。`,
+        targetPath: "/dashboard?subscriptions=1",
       },
     });
     return subscription;
@@ -151,6 +152,7 @@ export class CalendarService {
         content: dto.action === "APPROVE"
           ? `${subscription.owner.displayName} 已同意你的订阅申请，相关日程现在会显示在你的日历中。`
           : `${subscription.owner.displayName} 暂未同意你的日历订阅申请。`,
+        targetPath: "/dashboard?subscriptions=1",
       },
     });
     return updated;

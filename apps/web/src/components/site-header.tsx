@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Heart, House, LogIn, PenLine, Sparkles } from "lucide-react";
+import { Bell, House, LogIn, PenLine, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 export function SiteHeader() {
   const { user, loading, logout } = useAuth();
   return <>
     <header className="site-header">
-      <Link className="brand" href="/"><span className="brand-mark"><Heart size={19} fill="currentColor" /></span><span className="brand-copy"><span>la vie</span><small>两个人的生活空间</small></span></Link>
       <nav className="desktop-nav" aria-label="主导航">
         {user && <Link href="/dashboard">日历</Link>}
         {user && <Link href="/journal">手帐</Link>}
