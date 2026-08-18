@@ -116,6 +116,7 @@ export type TaskCountAggregateOutputType = {
   rewardType: number
   rewardAmount: number
   rewardDescription: number
+  rewardOptions: number
   rewardFulfillmentStatus: number
   locationType: number
   locationDescription: number
@@ -222,6 +223,7 @@ export type TaskCountAggregateInputType = {
   rewardType?: true
   rewardAmount?: true
   rewardDescription?: true
+  rewardOptions?: true
   rewardFulfillmentStatus?: true
   locationType?: true
   locationDescription?: true
@@ -339,6 +341,7 @@ export type TaskGroupByOutputType = {
   rewardType: $Enums.RewardType
   rewardAmount: runtime.Decimal | null
   rewardDescription: string | null
+  rewardOptions: string[]
   rewardFulfillmentStatus: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription: string | null
@@ -392,6 +395,7 @@ export type TaskWhereInput = {
   rewardType?: Prisma.EnumRewardTypeFilter<"Task"> | $Enums.RewardType
   rewardAmount?: Prisma.DecimalNullableFilter<"Task"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.StringNullableFilter<"Task"> | string | null
+  rewardOptions?: Prisma.StringNullableListFilter<"Task">
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFilter<"Task"> | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFilter<"Task"> | $Enums.LocationType
   locationDescription?: Prisma.StringNullableFilter<"Task"> | string | null
@@ -431,6 +435,7 @@ export type TaskOrderByWithRelationInput = {
   rewardType?: Prisma.SortOrder
   rewardAmount?: Prisma.SortOrderInput | Prisma.SortOrder
   rewardDescription?: Prisma.SortOrderInput | Prisma.SortOrder
+  rewardOptions?: Prisma.SortOrder
   rewardFulfillmentStatus?: Prisma.SortOrder
   locationType?: Prisma.SortOrder
   locationDescription?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -473,6 +478,7 @@ export type TaskWhereUniqueInput = Prisma.AtLeast<{
   rewardType?: Prisma.EnumRewardTypeFilter<"Task"> | $Enums.RewardType
   rewardAmount?: Prisma.DecimalNullableFilter<"Task"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.StringNullableFilter<"Task"> | string | null
+  rewardOptions?: Prisma.StringNullableListFilter<"Task">
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFilter<"Task"> | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFilter<"Task"> | $Enums.LocationType
   locationDescription?: Prisma.StringNullableFilter<"Task"> | string | null
@@ -512,6 +518,7 @@ export type TaskOrderByWithAggregationInput = {
   rewardType?: Prisma.SortOrder
   rewardAmount?: Prisma.SortOrderInput | Prisma.SortOrder
   rewardDescription?: Prisma.SortOrderInput | Prisma.SortOrder
+  rewardOptions?: Prisma.SortOrder
   rewardFulfillmentStatus?: Prisma.SortOrder
   locationType?: Prisma.SortOrder
   locationDescription?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -550,6 +557,7 @@ export type TaskScalarWhereWithAggregatesInput = {
   rewardType?: Prisma.EnumRewardTypeWithAggregatesFilter<"Task"> | $Enums.RewardType
   rewardAmount?: Prisma.DecimalNullableWithAggregatesFilter<"Task"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
+  rewardOptions?: Prisma.StringNullableListFilter<"Task">
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusWithAggregatesFilter<"Task"> | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeWithAggregatesFilter<"Task"> | $Enums.LocationType
   locationDescription?: Prisma.StringNullableWithAggregatesFilter<"Task"> | string | null
@@ -578,6 +586,7 @@ export type TaskCreateInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -617,6 +626,7 @@ export type TaskUncheckedCreateInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -652,6 +662,7 @@ export type TaskUpdateInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -691,6 +702,7 @@ export type TaskUncheckedUpdateInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -728,6 +740,7 @@ export type TaskCreateManyInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -756,6 +769,7 @@ export type TaskUpdateManyMutationInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -786,6 +800,7 @@ export type TaskUncheckedUpdateManyInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -826,6 +841,7 @@ export type TaskCountOrderByAggregateInput = {
   rewardType?: Prisma.SortOrder
   rewardAmount?: Prisma.SortOrder
   rewardDescription?: Prisma.SortOrder
+  rewardOptions?: Prisma.SortOrder
   rewardFulfillmentStatus?: Prisma.SortOrder
   locationType?: Prisma.SortOrder
   locationDescription?: Prisma.SortOrder
@@ -1008,6 +1024,10 @@ export type TaskUncheckedUpdateManyWithoutProjectNestedInput = {
   deleteMany?: Prisma.TaskScalarWhereInput | Prisma.TaskScalarWhereInput[]
 }
 
+export type TaskCreaterewardOptionsInput = {
+  set: string[]
+}
+
 export type EnumTaskStatusFieldUpdateOperationsInput = {
   set?: $Enums.TaskStatus
 }
@@ -1018,6 +1038,11 @@ export type EnumClaimModeFieldUpdateOperationsInput = {
 
 export type EnumRewardTypeFieldUpdateOperationsInput = {
   set?: $Enums.RewardType
+}
+
+export type TaskUpdaterewardOptionsInput = {
+  set?: string[]
+  push?: string | string[]
 }
 
 export type EnumRewardFulfillmentStatusFieldUpdateOperationsInput = {
@@ -1150,6 +1175,7 @@ export type TaskCreateWithoutPublisherInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1187,6 +1213,7 @@ export type TaskUncheckedCreateWithoutPublisherInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1253,6 +1280,7 @@ export type TaskScalarWhereInput = {
   rewardType?: Prisma.EnumRewardTypeFilter<"Task"> | $Enums.RewardType
   rewardAmount?: Prisma.DecimalNullableFilter<"Task"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.StringNullableFilter<"Task"> | string | null
+  rewardOptions?: Prisma.StringNullableListFilter<"Task">
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFilter<"Task"> | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFilter<"Task"> | $Enums.LocationType
   locationDescription?: Prisma.StringNullableFilter<"Task"> | string | null
@@ -1281,6 +1309,7 @@ export type TaskCreateWithoutProjectInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1318,6 +1347,7 @@ export type TaskUncheckedCreateWithoutProjectInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1379,6 +1409,7 @@ export type TaskCreateWithoutRequirementsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1417,6 +1448,7 @@ export type TaskUncheckedCreateWithoutRequirementsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1467,6 +1499,7 @@ export type TaskUpdateWithoutRequirementsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1505,6 +1538,7 @@ export type TaskUncheckedUpdateWithoutRequirementsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1539,6 +1573,7 @@ export type TaskCreateWithoutAttachmentsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1577,6 +1612,7 @@ export type TaskUncheckedCreateWithoutAttachmentsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1627,6 +1663,7 @@ export type TaskUpdateWithoutAttachmentsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1665,6 +1702,7 @@ export type TaskUncheckedUpdateWithoutAttachmentsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1699,6 +1737,7 @@ export type TaskCreateWithoutApplicationsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1737,6 +1776,7 @@ export type TaskUncheckedCreateWithoutApplicationsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1787,6 +1827,7 @@ export type TaskUpdateWithoutApplicationsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1825,6 +1866,7 @@ export type TaskUncheckedUpdateWithoutApplicationsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1859,6 +1901,7 @@ export type TaskCreateWithoutAssignmentsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1897,6 +1940,7 @@ export type TaskUncheckedCreateWithoutAssignmentsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -1947,6 +1991,7 @@ export type TaskUpdateWithoutAssignmentsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1985,6 +2030,7 @@ export type TaskUncheckedUpdateWithoutAssignmentsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2019,6 +2065,7 @@ export type TaskCreateWithoutSubmissionsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -2057,6 +2104,7 @@ export type TaskUncheckedCreateWithoutSubmissionsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -2107,6 +2155,7 @@ export type TaskUpdateWithoutSubmissionsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2145,6 +2194,7 @@ export type TaskUncheckedUpdateWithoutSubmissionsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2179,6 +2229,7 @@ export type TaskCreateWithoutCommentsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -2217,6 +2268,7 @@ export type TaskUncheckedCreateWithoutCommentsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -2267,6 +2319,7 @@ export type TaskUpdateWithoutCommentsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2305,6 +2358,7 @@ export type TaskUncheckedUpdateWithoutCommentsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2339,6 +2393,7 @@ export type TaskCreateWithoutNotificationsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -2377,6 +2432,7 @@ export type TaskUncheckedCreateWithoutNotificationsInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -2427,6 +2483,7 @@ export type TaskUpdateWithoutNotificationsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2465,6 +2522,7 @@ export type TaskUncheckedUpdateWithoutNotificationsInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2500,6 +2558,7 @@ export type TaskCreateManyPublisherInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -2528,6 +2587,7 @@ export type TaskUpdateWithoutPublisherInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2565,6 +2625,7 @@ export type TaskUncheckedUpdateWithoutPublisherInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2601,6 +2662,7 @@ export type TaskUncheckedUpdateManyWithoutPublisherInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2630,6 +2692,7 @@ export type TaskCreateManyProjectInput = {
   rewardType: $Enums.RewardType
   rewardAmount?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: string | null
+  rewardOptions?: Prisma.TaskCreaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: $Enums.RewardFulfillmentStatus
   locationType: $Enums.LocationType
   locationDescription?: string | null
@@ -2658,6 +2721,7 @@ export type TaskUpdateWithoutProjectInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2695,6 +2759,7 @@ export type TaskUncheckedUpdateWithoutProjectInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2731,6 +2796,7 @@ export type TaskUncheckedUpdateManyWithoutProjectInput = {
   rewardType?: Prisma.EnumRewardTypeFieldUpdateOperationsInput | $Enums.RewardType
   rewardAmount?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   rewardDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rewardOptions?: Prisma.TaskUpdaterewardOptionsInput | string[]
   rewardFulfillmentStatus?: Prisma.EnumRewardFulfillmentStatusFieldUpdateOperationsInput | $Enums.RewardFulfillmentStatus
   locationType?: Prisma.EnumLocationTypeFieldUpdateOperationsInput | $Enums.LocationType
   locationDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2846,6 +2912,7 @@ export type TaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   rewardType?: boolean
   rewardAmount?: boolean
   rewardDescription?: boolean
+  rewardOptions?: boolean
   rewardFulfillmentStatus?: boolean
   locationType?: boolean
   locationDescription?: boolean
@@ -2886,6 +2953,7 @@ export type TaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   rewardType?: boolean
   rewardAmount?: boolean
   rewardDescription?: boolean
+  rewardOptions?: boolean
   rewardFulfillmentStatus?: boolean
   locationType?: boolean
   locationDescription?: boolean
@@ -2918,6 +2986,7 @@ export type TaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   rewardType?: boolean
   rewardAmount?: boolean
   rewardDescription?: boolean
+  rewardOptions?: boolean
   rewardFulfillmentStatus?: boolean
   locationType?: boolean
   locationDescription?: boolean
@@ -2950,6 +3019,7 @@ export type TaskSelectScalar = {
   rewardType?: boolean
   rewardAmount?: boolean
   rewardDescription?: boolean
+  rewardOptions?: boolean
   rewardFulfillmentStatus?: boolean
   locationType?: boolean
   locationDescription?: boolean
@@ -2964,7 +3034,7 @@ export type TaskSelectScalar = {
   version?: boolean
 }
 
-export type TaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "projectId" | "publisherId" | "title" | "summary" | "description" | "category" | "status" | "visibility" | "shareToken" | "claimMode" | "maxAssignees" | "rewardType" | "rewardAmount" | "rewardDescription" | "rewardFulfillmentStatus" | "locationType" | "locationDescription" | "timeMode" | "durationValue" | "durationUnit" | "deadline" | "publishedAt" | "completedAt" | "createdAt" | "updatedAt" | "version", ExtArgs["result"]["task"]>
+export type TaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "projectId" | "publisherId" | "title" | "summary" | "description" | "category" | "status" | "visibility" | "shareToken" | "claimMode" | "maxAssignees" | "rewardType" | "rewardAmount" | "rewardDescription" | "rewardOptions" | "rewardFulfillmentStatus" | "locationType" | "locationDescription" | "timeMode" | "durationValue" | "durationUnit" | "deadline" | "publishedAt" | "completedAt" | "createdAt" | "updatedAt" | "version", ExtArgs["result"]["task"]>
 export type TaskInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   project?: boolean | Prisma.ProjectDefaultArgs<ExtArgs>
   publisher?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -3015,6 +3085,7 @@ export type $TaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     rewardType: $Enums.RewardType
     rewardAmount: runtime.Decimal | null
     rewardDescription: string | null
+    rewardOptions: string[]
     rewardFulfillmentStatus: $Enums.RewardFulfillmentStatus
     locationType: $Enums.LocationType
     locationDescription: string | null
@@ -3474,6 +3545,7 @@ export interface TaskFieldRefs {
   readonly rewardType: Prisma.FieldRef<"Task", 'RewardType'>
   readonly rewardAmount: Prisma.FieldRef<"Task", 'Decimal'>
   readonly rewardDescription: Prisma.FieldRef<"Task", 'String'>
+  readonly rewardOptions: Prisma.FieldRef<"Task", 'String[]'>
   readonly rewardFulfillmentStatus: Prisma.FieldRef<"Task", 'RewardFulfillmentStatus'>
   readonly locationType: Prisma.FieldRef<"Task", 'LocationType'>
   readonly locationDescription: Prisma.FieldRef<"Task", 'String'>

@@ -33,6 +33,7 @@ export const taskSchema = z.object({
   rewardType: z.enum(["POINTS", "CASH_OFFLINE", "ITEM", "SERVICE", "OTHER"]),
   rewardAmount: z.string().regex(/^\d{1,16}(\.\d{1,2})?$/, "金额格式不正确").nullable().optional(),
   rewardDescription: z.string().max(500).nullable().optional(),
+  rewardOptions: z.array(z.string().trim().min(1).max(500)).max(8).optional(),
   locationType: z.enum(["REMOTE", "ONSITE", "HYBRID", "UNSPECIFIED"]),
   locationDescription: z.string().max(500).nullable().optional(),
   timeMode: z.enum(["BEFORE", "WITHIN", "AT"]),

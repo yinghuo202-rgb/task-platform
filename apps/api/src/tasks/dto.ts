@@ -76,6 +76,9 @@ export class CreateTaskDto {
   @IsOptional() @IsString() @MaxLength(500)
   rewardDescription?: string | null;
 
+  @IsOptional() @IsArray() @ArrayMaxSize(8) @IsString({ each: true }) @MaxLength(500, { each: true })
+  rewardOptions?: string[];
+
   @IsEnum(LocationType)
   locationType!: LocationType;
 

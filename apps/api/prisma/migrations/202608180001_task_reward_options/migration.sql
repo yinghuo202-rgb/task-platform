@@ -1,0 +1,2 @@
+ALTER TABLE "tasks"
+  ADD COLUMN "rewardOptions" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

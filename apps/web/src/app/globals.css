@@ -520,6 +520,12 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .order-history-main i { width: 8px; height: 8px; border-radius: 3px; }
 .order-history-time { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: .78rem; white-space: nowrap; }
 .reward-page { display: grid; gap: 20px; }
+.reward-options { display: grid; gap: 8px; }
+.reward-option { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.reward-option input[type="radio"] { flex: none; accent-color: var(--brand); }
+.reward-option .input { min-width: 0; }
+.reward-add-option { width: max-content; padding: 4px 0; border: 0; color: var(--brand-dark); background: transparent; cursor: pointer; font-size: .78rem; font-weight: 700; }
+.field-help { color: var(--muted); font-size: .73rem; }
 .reward-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .reward-stats .stat-card { min-height: 128px; }
 .reward-stats .stat-card small { display: block; margin-top: 4px; color: var(--muted); font-size: .75rem; }

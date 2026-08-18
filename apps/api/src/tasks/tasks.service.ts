@@ -230,6 +230,11 @@ function taskCore(dto: CreateTaskDto) {
   } else if (!dto.deadline) {
     throw new BadRequestException(dto.timeMode === "AT" ? "请选择具体执行时间" : "请选择截止时间");
   }
+  const rewardOptions = [...new Set((dto.rewardOptions ?? []).map((option) => option.trim()).filter(Boolean))];
+  const rewardDescription = dto.rewardDescription?.trim() || null;
+  if (rewardDescription && rewardOptions.length > 0 && !rewardOptions.includes(rewardDescription)) {
+    throw new BadRequestException("请选择一项完成奖励");
+  }
   return {
     title: dto.title.trim(),
     summary: dto.summary.trim(),
@@ -241,7 +246,8 @@ function taskCore(dto: CreateTaskDto) {
     maxAssignees: dto.maxAssignees,
     rewardType: dto.rewardType,
     rewardAmount: dto.rewardAmount || null,
-    rewardDescription: dto.rewardDescription?.trim() || null,
+    rewardDescription,
+    rewardOptions,
     locationType: dto.locationType,
     locationDescription: dto.locationDescription?.trim() || null,
     timeMode: dto.timeMode,
