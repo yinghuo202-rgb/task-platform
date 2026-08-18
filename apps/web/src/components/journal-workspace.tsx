@@ -730,12 +730,9 @@ const EntryEditor = memo(function EntryEditor({ editor, saving, onClose, onDelet
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSaveInFlightRef = useRef(false);
   const autoSavePendingRef = useRef(false);
-  const skipNextAutoSaveRef = useRef(false);
-  const initialDraftRef = useRef(true);
   const scheduleLatestRef = useRef<() => void>(() => undefined);
   const onAutoSaveRef = useRef(onAutoSave);
   useEffect(() => { onAutoSaveRef.current = onAutoSave; }, [onAutoSave]);
-  useEffect(() => { draftRef.current = draft; }, [draft]);
   const runAutoSave = useCallback(async (snapshot: EditorState) => {
     if (autoSaveInFlightRef.current) { autoSavePendingRef.current = true; return; }
     autoSaveInFlightRef.current = true;
@@ -744,12 +741,11 @@ const EntryEditor = memo(function EntryEditor({ editor, saving, onClose, onDelet
     autoSaveInFlightRef.current = false;
     const changedWhileSaving = draftRef.current !== snapshot;
     if (saved) {
+      const savedVersion = { id: saved.id, version: saved.version };
+      draftRef.current = { ...draftRef.current, ...savedVersion };
+      setDraft((current) => ({ ...current, ...savedVersion }));
       if (!changedWhileSaving) {
-        skipNextAutoSaveRef.current = true;
-        setDraft((current) => ({ ...current, id: saved.id, version: saved.version }));
         setAutoSaveState("saved");
-      } else {
-        setDraft((current) => ({ ...current, id: saved.id, version: saved.version }));
       }
     } else {
       setAutoSaveState("error");
@@ -768,16 +764,22 @@ const EntryEditor = memo(function EntryEditor({ editor, saving, onClose, onDelet
     autoSaveTimerRef.current = setTimeout(() => { autoSaveTimerRef.current = null; void runAutoSave(draftRef.current); }, JOURNAL_AUTOSAVE_DELAY);
   }, [runAutoSave]);
   useEffect(() => { scheduleLatestRef.current = scheduleLatest; }, [scheduleLatest]);
-  useEffect(() => {
-    if (initialDraftRef.current) { initialDraftRef.current = false; return; }
-    if (skipNextAutoSaveRef.current) { skipNextAutoSaveRef.current = false; return; }
-    scheduleLatest();
-    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  }, [draft, scheduleLatest]);
   useEffect(() => () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); }, []);
-  const update = useCallback((patch: Partial<EditorState>) => setDraft((current) => ({ ...current, ...patch })), []);
+  const update = useCallback((patch: Partial<EditorState>) => {
+    const next = { ...draftRef.current, ...patch };
+    draftRef.current = next;
+    setDraft(next);
+    scheduleLatestRef.current();
+  }, []);
+  const updateContent = useCallback((contentMarkdown: string) => {
+    draftRef.current = { ...draftRef.current, contentMarkdown };
+    // Keep the large Markdown body out of React state: the native textarea can
+    // update without re-rendering the editor and the autosave still sees the
+    // latest draft through the ref.
+    scheduleLatestRef.current();
+  }, []);
   const autoSaveLabel = autoSaveState === "pending" ? "稍后自动保存" : autoSaveState === "saving" ? "正在自动保存…" : autoSaveState === "saved" ? "已自动保存" : autoSaveState === "error" ? "自动保存失败，可点击保存重试" : "输入标题后自动保存";
-  return <div className="journal-editor-backdrop"><section className="journal-editor" role="dialog" aria-modal="true" aria-labelledby="journal-editor-title"><header><div><span className="eyebrow">WRITE IT DOWN</span><h2 id="journal-editor-title">{draft.id ? "编辑手帐" : "写手帐"}</h2></div><button type="button" aria-label="关闭" onClick={onClose}><X size={19} /></button></header><form className="form-stack" onSubmit={(event) => { event.preventDefault(); if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); void onSubmit(draft); }}><Field label="标题" required><Input autoFocus value={draft.title} onChange={(event) => update({ title: event.target.value })} placeholder="例如：周末一起去散步" maxLength={160} /></Field><Field label="日期" required><Input type="date" value={draft.entryDate} onChange={(event) => update({ entryDate: event.target.value })} /></Field><Field label="正文"><Textarea className="journal-editor-textarea" value={draft.contentMarkdown} onChange={(event) => update({ contentMarkdown: event.target.value })} placeholder="写下今天发生的事，也可以直接粘贴 Markdown" maxLength={100000} /></Field><div className="journal-editor-actions"><small className={`journal-autosave-status state-${autoSaveState}`} aria-live="polite">{autoSaveLabel}</small>{draft.id && <Button className="danger" disabled={saving} type="button" onClick={onDelete}>移入归档</Button>}<span /><Button className="secondary" type="button" onClick={onClose}>取消</Button><Button disabled={saving} type="submit">{saving ? "保存中…" : "保存"}</Button></div></form></section></div>;
+  return <div className="journal-editor-backdrop"><section className="journal-editor" role="dialog" aria-modal="true" aria-labelledby="journal-editor-title"><header><div><span className="eyebrow">WRITE IT DOWN</span><h2 id="journal-editor-title">{draft.id ? "编辑手帐" : "写手帐"}</h2></div><button type="button" aria-label="关闭" onClick={onClose}><X size={19} /></button></header><form className="form-stack" onSubmit={(event) => { event.preventDefault(); if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); void onSubmit(draftRef.current); }}><Field label="标题" required><Input autoFocus value={draft.title} onChange={(event) => update({ title: event.target.value })} placeholder="例如：周末一起去散步" maxLength={160} /></Field><Field label="日期" required><Input type="date" value={draft.entryDate} onChange={(event) => update({ entryDate: event.target.value })} /></Field><Field label="正文"><Textarea className="journal-editor-textarea" defaultValue={editor.contentMarkdown} onChange={(event) => updateContent(event.target.value)} placeholder="写下今天发生的事，也可以直接粘贴 Markdown" maxLength={100000} /></Field><div className="journal-editor-actions"><small className={`journal-autosave-status state-${autoSaveState}`} aria-live="polite">{autoSaveLabel}</small>{draft.id && <Button className="danger" disabled={saving} type="button" onClick={onDelete}>移入归档</Button>}<span /><Button className="secondary" type="button" onClick={onClose}>取消</Button><Button disabled={saving} type="submit">{saving ? "保存中…" : "保存"}</Button></div></form></section></div>;
 });
 
 const MarkdownPreview = memo(function MarkdownPreview({ value, compact = false }: { value: string; compact?: boolean }) {
