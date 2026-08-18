@@ -26,7 +26,7 @@ export const taskSchema = z.object({
   title: z.string().min(1, "请输入事项").max(120),
   summary: z.string().min(1, "写一点备注").max(300),
   description: z.string().min(1, "写一点备注").max(20000),
-  category: z.string().min(1).max(50),
+  category: z.string().max(50).optional(),
   visibility: z.enum(["PUBLIC", "PRIVATE"]),
   claimMode: z.enum(["AUTO", "APPROVAL"]),
   maxAssignees: z.number().int().min(1).max(20),

@@ -11,17 +11,12 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { Button, Field, Input, Textarea } from "./ui";
 
 const defaults: TaskInput = {
-  projectId: "", title: "", summary: "", description: "稍后一起补充", category: "一起做", visibility: "PRIVATE",
+  projectId: "", title: "", summary: "", description: "稍后一起补充", visibility: "PRIVATE",
   claimMode: "AUTO", maxAssignees: 1, rewardType: "OTHER", rewardAmount: null,
   rewardDescription: "", locationType: "UNSPECIFIED", locationDescription: "",
   timeMode: "BEFORE", durationValue: 1, durationUnit: "DAYS", deadline: null,
   requirements: [{ title: "完成确认", description: "完成后由对方确认即可", required: true, sortOrder: 0 }],
 };
-
-const categoriesByKind = {
-  COMPANION: ["一起做", "家务", "采购", "约会", "健康", "记录", "其他"],
-  GENERAL: ["一起做", "家务", "采购", "约会", "健康", "记录", "其他"],
-} as const;
 
 type ExistingTask = TaskInput & { id: string; version: number; deadline: string | null };
 
@@ -36,9 +31,7 @@ export function TaskForm({ taskId, initialProjectId = "" }: { taskId?: string; i
   });
   const timeMode = useWatch({ control: form.control, name: "timeMode" });
   const selectedProjectId = useWatch({ control: form.control, name: "projectId" });
-  const currentCategory = useWatch({ control: form.control, name: "category" });
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
-  const projectCategories = categoriesByKind[selectedProject?.kind ?? "GENERAL"];
 
   useEffect(() => {
     void apiFetch<ProjectSummary[]>("/projects")
@@ -59,11 +52,6 @@ export function TaskForm({ taskId, initialProjectId = "" }: { taskId?: string; i
       requirements: data.requirements.map((item, index) => ({ ...item, sortOrder: index })),
     })).catch((error: unknown) => setLoadError(error instanceof Error ? error.message : "任务加载失败"));
   }, [taskId, form]);
-
-  useEffect(() => {
-    if (taskId || !selectedProject) return;
-    if (!projectCategories.includes(currentCategory as never)) form.setValue("category", projectCategories[0]);
-  }, [currentCategory, form, projectCategories, selectedProject, taskId]);
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -103,16 +91,13 @@ export function TaskForm({ taskId, initialProjectId = "" }: { taskId?: string; i
     <input type="hidden" {...form.register("description")} />
     <div className="task-space-note"><span style={{ background: selectedProject?.color ?? "#91c5b6" }} />{projectsLoading ? "正在打开 la vie…" : selectedProject?.name ?? "la vie"}</div>
     <Field label="想请对方做的事" required error={form.formState.errors.title?.message}><Input autoFocus placeholder="例如：帮我选一张照片做头像" {...form.register("title")} /></Field>
-    <div className="form-grid">
-      <Field label="分类" required error={form.formState.errors.category?.message}><select className="input" {...form.register("category")}>{!projectCategories.includes(currentCategory as never) && <option>{currentCategory}</option>}{projectCategories.map((category) => <option key={category}>{category}</option>)}</select></Field>
-      <Field label="什么时候" required error={form.formState.errors.timeMode?.message}>
+    <Field label="什么时候" required error={form.formState.errors.timeMode?.message}>
       <select className="input" {...form.register("timeMode")}>
         <option value="BEFORE">在某个时间前</option>
         <option value="WITHIN">开始后一段时间内</option>
         <option value="AT">约在具体时间</option>
       </select>
-      </Field>
-    </div>
+    </Field>
     {timeMode === "WITHIN"
       ? <div className="form-grid">
         <Field label="多长时间内" required error={form.formState.errors.durationValue?.message}><Input type="number" min="1" step="1" {...form.register("durationValue", { valueAsNumber: true })} /></Field>
@@ -120,7 +105,7 @@ export function TaskForm({ taskId, initialProjectId = "" }: { taskId?: string; i
       </div>
       : <Field label={timeMode === "AT" ? "具体执行时间" : "截止时间"} required error={form.formState.errors.deadline?.message}><Input type="datetime-local" {...form.register("deadline")} /></Field>}
     <Field label="备注" required error={form.formState.errors.summary?.message}><Textarea style={{ minHeight: 110 }} placeholder="写下要准备的东西，或想告诉对方的话" {...form.register("summary")} /></Field>
-    <Field label="完成奖励（可选）" error={form.formState.errors.rewardDescription?.message}><Input placeholder="例如：一个拥抱、请喝奶茶、周末负责做饭" maxLength={500} {...form.register("rewardDescription")} /></Field>
+    <Field label="完成奖励（可选）" error={form.formState.errors.rewardDescription?.message}><Input aria-label="完成奖励" placeholder="例如：请喝奶茶、周末做一顿饭、送一束花" maxLength={500} {...form.register("rewardDescription")} /></Field>
     {form.formState.errors.root?.message && <div className="form-message" role="alert">{form.formState.errors.root.message}</div>}
     {!projectsLoading && !projects.length && <div className="notice">你还没有加入 la vie，请联系空间管理员。</div>}
     <Button type="button" disabled={form.formState.isSubmitting || !projects.length} onClick={() => void submit()}>{form.formState.isSubmitting ? "保存中…" : taskId ? "保存修改" : "发布给对方"}</Button>

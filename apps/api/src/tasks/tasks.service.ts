@@ -234,7 +234,8 @@ function taskCore(dto: CreateTaskDto) {
     title: dto.title.trim(),
     summary: dto.summary.trim(),
     description: dto.description.trim(),
-    category: dto.category.trim(),
+    // 保留旧字段以兼容已有数据库记录；分类不再作为用户可见功能。
+    category: dto.category?.trim() || "未分类",
     visibility: dto.visibility,
     claimMode: dto.claimMode,
     maxAssignees: dto.maxAssignees,

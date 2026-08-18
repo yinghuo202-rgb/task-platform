@@ -28,6 +28,7 @@
 
 * { box-sizing: border-box; }
 html { overflow-x: hidden; background: var(--canvas); scroll-behavior: smooth; }
+html.journal-scroll-locked, body.journal-scroll-locked { overflow: hidden; }
 body {
   margin: 0;
   min-width: 320px;
@@ -160,6 +161,9 @@ p { line-height: 1.7; }
 .task-meta span { display: inline-flex; align-items: center; gap: 5px; }
 .task-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: .79rem; }
 .task-reward { display: inline-flex; align-items: center; gap: 4px; max-width: 150px; overflow: hidden; color: #8b5370; font-size: .72rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.task-reward-panel h2 { display: flex; align-items: center; gap: 7px; }
+.task-reward-panel h2 svg { color: var(--brand); }
+.task-reward-panel p { margin: 0; color: var(--ink-strong); font-weight: 700; }
 .task-publisher { display: flex; min-width: 0; align-items: center; gap: 8px; }
 .avatar-placeholder { display: grid; place-items: center; flex: 0 0 auto; width: 28px; height: 28px; border-radius: 11px 11px 11px 5px; color: var(--brand); background: var(--brand-soft); font-size: .75rem; font-weight: 850; }
 .task-deadline { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -515,6 +519,23 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .order-history-main small { display: flex; align-items: center; gap: 6px; color: var(--muted); }
 .order-history-main i { width: 8px; height: 8px; border-radius: 3px; }
 .order-history-time { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: .78rem; white-space: nowrap; }
+.reward-page { display: grid; gap: 20px; }
+.reward-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.reward-stats .stat-card { min-height: 128px; }
+.reward-stats .stat-card small { display: block; margin-top: 4px; color: var(--muted); font-size: .75rem; }
+.reward-history-grid { display: grid; grid-template-columns: minmax(220px, .72fr) minmax(0, 1.28fr); gap: 16px; align-items: start; }
+.reward-history-grid .card { min-width: 0; }
+.reward-history-grid h2 { margin-top: 0; }
+.reward-summary-list, .reward-record-list { display: grid; gap: 5px; }
+.reward-summary-row, .reward-record { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 9px 10px; border-radius: 12px; }
+.reward-summary-row { justify-content: space-between; color: var(--ink); background: #fff8fb; }
+.reward-summary-row span, .reward-record-icon { display: inline-flex; align-items: center; gap: 7px; color: var(--brand-dark); }
+.reward-summary-row strong { color: var(--ink-strong); font-size: .82rem; }
+.reward-record { border: 1px solid transparent; color: inherit; transition: background .15s, border-color .15s; }
+.reward-record:hover { border-color: var(--line); background: #fff8fb; }
+.reward-record > span:nth-child(2) { display: grid; min-width: 0; flex: 1; gap: 3px; }
+.reward-record strong { overflow: hidden; color: var(--ink-strong); text-overflow: ellipsis; white-space: nowrap; }
+.reward-record small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
 
 /* 个人日历工作台 */
 .calendar-page { display: grid; gap: 12px; min-width: 0; }
@@ -847,10 +868,10 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .journal-toolbar { justify-content: space-between; gap: 16px; padding: 9px 10px; border: 1px solid rgb(255 255 255 / 76%); border-radius: 16px; background: rgb(255 255 255 / 48%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 82%), 0 12px 34px rgb(73 94 84 / 7%); backdrop-filter: blur(22px) saturate(135%); }
 .journal-view-tabs button { min-height: 34px; padding: 6px 11px; border: 0; border-radius: 10px; color: var(--muted); background: transparent; cursor: pointer; }
 .journal-view-tabs button.active { color: var(--ink-strong); background: var(--accent); font-weight: 750; }
-.journal-stream-stage { position: relative; min-height: 690px; padding: 18px 48px 0 0; }
+.journal-stream-stage { position: relative; height: min(690px, calc(100dvh - 250px)); min-height: 0; overflow: hidden; padding: 18px 48px 0 0; overscroll-behavior: none; }
 .journal-stream-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; color: var(--muted); font-size: .82rem; }
 .journal-stream-meta strong { color: var(--ink-strong); font-size: 1rem; }
-.journal-stream-deck { position: relative; height: 610px; overflow: hidden; cursor: grab; touch-action: pan-x; user-select: none; -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 11%, black 89%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, black 11%, black 89%, transparent 100%); }
+.journal-stream-deck { position: relative; height: calc(100% - 48px); min-height: 0; overflow: hidden; cursor: grab; touch-action: none; user-select: none; overscroll-behavior: none; -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 11%, black 89%, transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, black 11%, black 89%, transparent 100%); }
 .journal-stream-deck:active { cursor: grabbing; }
 .journal-entry-card { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) 168px; gap: 22px; min-height: 270px; padding: 26px; overflow: hidden; border: 1px solid rgb(255 255 255 / 82%); border-radius: 26px 26px 26px 10px; background: linear-gradient(135deg, rgb(255 255 255 / 78%), rgb(248 253 249 / 55%)); box-shadow: 0 24px 70px rgb(65 78 67 / 12%), inset 0 1px 0 rgb(255 255 255 / 96%), inset 0 -1px 0 rgb(164 188 176 / 12%); backdrop-filter: blur(26px) saturate(145%); }
 .journal-entry-card[role="button"] { cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease; }
@@ -967,6 +988,10 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 .journal-editor-actions { justify-content: flex-end; padding-top: 4px; }
 .journal-editor-actions > span { flex: 1; }
 .journal-editor-actions .button { min-width: 90px; }
+.journal-autosave-status { margin-right: auto; color: var(--muted); font-size: .7rem; font-weight: 600; }
+.journal-autosave-status.state-saving { color: var(--brand-dark); }
+.journal-autosave-status.state-saved { color: var(--green); }
+.journal-autosave-status.state-error { color: var(--red); }
 
 @media (max-width: 720px) {
   .journal-header { align-items: stretch; flex-direction: column; }
@@ -974,8 +999,8 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
   .journal-toolbar { align-items: stretch; flex-direction: column; }
   .journal-view-tabs { width: 100%; }
   .journal-view-tabs button { flex: 1; }
-  .journal-stream-stage { min-height: 630px; padding-right: 36px; padding-left: 0; }
-  .journal-stream-deck { height: 550px; }
+  .journal-stream-stage { height: calc(100dvh - 210px); min-height: 0; padding-right: 36px; padding-left: 0; }
+  .journal-stream-deck { height: calc(100% - 48px); min-height: 0; }
   .journal-entry-card { grid-template-columns: 1fr; }
   .journal-stream-card { min-height: 190px; max-height: 214px; padding: 17px; }
   .journal-entry-art { min-height: 100px; }
@@ -986,6 +1011,7 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
   .journal-reader { grid-template-columns: 1fr; }
   .journal-reader > aside { min-height: 190px; }
   .journal-reader-pagination small { display: none; }
+  .reward-history-grid { grid-template-columns: 1fr; }
 }
 
 @media (min-width: 721px) and (max-width: 980px) {

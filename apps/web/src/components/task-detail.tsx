@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { Gift } from "lucide-react";
 import type { TaskSummary } from "@task-platform/shared-types";
 import { apiFetch, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -66,7 +67,7 @@ export function TaskDetail({ id }: { id: string }) {
   return <div className="detail-grid">
     <div className="detail-main">
       <article className="card">
-        <div className="task-card-top"><span className="project-pill"><i style={{ background: task.project.color }} />{task.category}</span><StatusBadge status={task.status} /></div>
+        <div className="task-card-top"><span className="project-pill"><i style={{ background: task.project.color }} />la vie</span><StatusBadge status={task.status} /></div>
         <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.3rem)" }}>{task.title}</h1>
         <p className="muted">{task.summary}</p>
         <div className="task-meta"><span>{task.publisher.displayName} 写下</span><span>·</span><span>{formatDate(task.publishedAt ?? task.createdAt)}</span></div>
@@ -85,6 +86,7 @@ export function TaskDetail({ id }: { id: string }) {
       <section className="card"><h2>时间</h2><dl className="stat-list">
         <div><dt>安排</dt><dd>{taskTimeLabel(task)}</dd></div>
       </dl></section>
+      {task.rewardDescription && <section className="card task-reward-panel"><h2><Gift size={17} />完成奖励</h2><p>{task.rewardDescription}</p></section>}
       <section className="card form-stack">
         {error && <div className="form-message" role="alert">{error}</div>}
         {!user && <Link className="button" href={`/login?next=/tasks/${id}`}>登录后查看</Link>}

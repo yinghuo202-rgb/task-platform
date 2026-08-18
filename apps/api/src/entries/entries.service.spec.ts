@@ -18,9 +18,15 @@ describe("EntriesService private-space permissions", () => {
       createdAt: new Date(),
       author: { id: "admin-id", username: "yinghuo202", displayName: "萤火" },
     }));
+    const notificationCreateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const transaction = vi.fn().mockImplementation(async (callback) => callback({
+      entryComment: { create },
+      notification: { createMany: notificationCreateMany },
+    }));
     const prisma = {
       entry: { findUnique: vi.fn().mockResolvedValue({ projectId: "project-id", visibility: "PUBLIC", createdById: "author-id", status: "PUBLISHED" }) },
-      entryComment: { create },
+      projectMember: { findMany: vi.fn().mockResolvedValue([{ userId: "author-id" }]) },
+      $transaction: transaction,
     } as unknown as PrismaService;
     const service = new EntriesService(prisma, new ConfigService(), storage);
 
@@ -33,6 +39,7 @@ describe("EntriesService private-space permissions", () => {
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
       data: { entryId: "entry-id", authorId: "admin-id", content: "我也记得", anchorBlock: 3, anchorQuote: "那天一起散步" },
     }));
+    expect(notificationCreateMany).toHaveBeenCalledWith({ data: [{ userId: "author-id", type: "SYSTEM", title: "手帐收到新评论", content: "我也记得", targetPath: "/journal?entry=entry-id" }] });
   });
 
   it("does not let a viewer create a hand journal entry", async () => {

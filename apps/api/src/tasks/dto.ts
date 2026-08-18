@@ -55,8 +55,8 @@ export class CreateTaskDto {
   @IsString() @MinLength(1) @MaxLength(20_000)
   description!: string;
 
-  @IsString() @MinLength(1) @MaxLength(50)
-  category!: string;
+  @IsOptional() @IsString() @MaxLength(50)
+  category?: string;
 
   @IsEnum(Visibility)
   visibility!: Visibility;
