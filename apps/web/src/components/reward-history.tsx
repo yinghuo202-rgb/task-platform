@@ -9,7 +9,7 @@ import { EmptyState, StatusBadge } from "./ui";
 
 type RewardRecord = TaskSummary & { rewardFulfillmentStatus?: string };
 
-export function RewardHistory() {
+export function RewardHistory({ embedded = false }: { embedded?: boolean }) {
   const [tasks, setTasks] = useState<RewardRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,8 +29,8 @@ export function RewardHistory() {
     return [...counts.entries()].sort((left, right) => right[1] - left[1]);
   }, [rewards]);
 
-  return <section className="section compact"><div className="container reward-page">
-    <div className="section-heading"><div><span className="eyebrow">LA VIE · REWARDS</span><h1>收到的奖励</h1><p className="muted">每一次完成，都会在这里留下一个小小的回礼。</p></div><Link className="button secondary" href="/tasks"><Sparkles size={16} />去清单</Link></div>
+  return <section className={`reward-page${embedded ? " embedded" : ""}`}>
+    {embedded ? <div className="reward-inline-heading"><div><h2>收到的奖励</h2><p>每一次完成，都会在这里留下一个小小的回礼。</p></div></div> : <div className="section-heading"><div><span className="eyebrow">LA VIE · REWARDS</span><h1>收到的奖励</h1><p className="muted">每一次完成，都会在这里留下一个小小的回礼。</p></div><Link className="button secondary" href="/tasks"><Sparkles size={16} />去清单</Link></div>}
     {loading ? <div className="loading">正在整理奖励记录…</div> : error ? <EmptyState title="奖励记录加载失败" description={error} /> : <>
       <div className="stat-grid reward-stats">
         <div className="stat-card candy-pink"><span>收到次数</span><strong>{rewards.length}</strong><small>已完成的接取任务</small></div>
@@ -41,7 +41,7 @@ export function RewardHistory() {
         <section className="card"><h2>获得记录</h2><div className="reward-record-list">{rewards.map(({ task, label, completedAt }) => <Link className="reward-record" href={`/tasks/${task.id}`} key={task.id}><span className="reward-record-icon"><CheckCircle2 size={17} /></span><span><strong>{label}</strong><small>{task.title}{completedAt ? ` · ${formatDate(completedAt)}收到` : ""}</small></span><StatusBadge status="COMPLETED" /><ArrowRight size={16} /></Link>)}</div></section>
       </div> : <EmptyState title="还没有收到奖励" description="完成一次接取的任务后，奖励会自动记录在这里。" action={{ href: "/tasks", label: "去看看清单" }} />}
     </>}
-  </div></section>;
+  </section>;
 }
 
 function rewardLabel(task: TaskSummary) {

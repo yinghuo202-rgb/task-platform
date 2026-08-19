@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Check, Heart, PenLine } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { CalendarWorkspace } from "@/components/calendar-workspace";
+import { DashboardSummary } from "@/components/dashboard-summary";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -27,5 +27,5 @@ export default function Home() {
       </aside>
     </div></div></section>
   </>;
-  return <CalendarWorkspace />;
+  return <DashboardSummary />;
 }

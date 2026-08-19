@@ -808,7 +808,7 @@ function markdownBlockText(block: MarkdownBlock) {
   return block.text;
 }
 function normalizeAnchorText(value: string) { return value.replace(/\s+/g, " ").trim().slice(0, 500); }
-function parseMarkdown(value: string): MarkdownBlock[] {
+export function parseMarkdown(value: string): MarkdownBlock[] {
   const lines = value.trim() ? value.replace(/\r/g, "").split("\n") : ["还没有写下正文。"];
   const blocks: MarkdownBlock[] = [];
   let index = 0;
@@ -836,12 +836,9 @@ function parseMarkdown(value: string): MarkdownBlock[] {
       while (index < lines.length) { const item = (lines[index] ?? "").match(/^\s*(?:([-*+])|(\d+)\.)\s+(.+)$/); if (!item || Boolean(item[2]) !== ordered) break; items.push(item[3]!); index += 1; }
       blocks.push({ type: "list", ordered, items }); continue;
     }
-    const paragraph = [line.trim()]; index += 1;
-    while (index < lines.length && (lines[index] ?? "").trim() && !/^(#{1,6})\s+|^```|^>\s?|^\s*(?:[-*+]|\d+\.)\s+|^!\[[^\]]*\]\([^)]+\)$/.test(lines[index] ?? "")) { paragraph.push((lines[index] ?? "").trim()); index += 1; }
-    // Preserve intentional single line breaks from imported Markdown. The
-    // renderer uses white-space: pre-wrap so diary prose keeps its original
-    // line rhythm instead of collapsing into one paragraph.
-    blocks.push({ type: "paragraph", text: paragraph.join("\n") });
+    // 手帐以自然换行为段落边界：输入一次回车，正文和评论锚点都生成独立的一段。
+    blocks.push({ type: "paragraph", text: line.trim() });
+    index += 1;
   }
   return blocks;
 }

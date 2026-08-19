@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { RewardHistory } from "@/components/reward-history";
-
-export const metadata: Metadata = { title: "奖励" };
+import { redirect } from "next/navigation";
 
 export default function RewardsPage() {
-  return <RewardHistory />;
+  redirect("/tasks?view=rewards");
 }
