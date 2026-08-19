@@ -88,7 +88,7 @@ p { line-height: 1.7; }
 
 .button {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 46px; padding: 10px 19px; border: 1px solid var(--brand); border-radius: 15px;
+  min-width: 0; max-width: 100%; min-height: 46px; padding: 10px 19px; border: 1px solid var(--brand); border-radius: 15px;
   color: white; background: linear-gradient(135deg, #d6a197, var(--brand)); box-shadow: 0 6px 0 #ad766d, 0 12px 24px rgb(116 81 74 / 14%); font-weight: 850; cursor: pointer;
   transition: transform .15s, background .15s, border-color .15s, box-shadow .15s;
 }
@@ -736,6 +736,11 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
 @media (max-width: 900px) {
   .site-header { grid-template-columns: 1fr auto; }
   .desktop-nav { display: none; }
+  .mobile-nav { position: fixed; z-index: 40; left: 8px; right: 8px; bottom: 8px; display: grid; grid-template-columns: repeat(4, 1fr); height: 68px; padding: 6px 4px max(6px, env(safe-area-inset-bottom)); border: 1px solid rgb(215 219 228 / 90%); border-radius: 18px; background: rgb(255 255 255 / 94%); box-shadow: 0 12px 32px rgb(24 32 51 / 16%); backdrop-filter: blur(18px); }
+  .mobile-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #5e6679; font-size: .64rem; font-weight: 650; }
+  .mobile-nav svg { width: 20px; height: 20px; }
+  .mobile-nav .mobile-primary { width: 52px; height: 52px; margin: -15px auto 0; border-radius: 16px; color: white; background: var(--brand); box-shadow: 0 9px 23px rgb(49 87 246 / 30%); }
+  .footer { padding-bottom: 104px; }
   .hero-grid, .detail-grid { grid-template-columns: 1fr; }
   .hero-copy { max-width: 700px; }
   .hero-panel { max-width: 650px; }
@@ -1033,4 +1038,47 @@ th { color: var(--muted); background: #fff8fb; font-size: .76rem; text-transform
   .journal-entry-card h2 { margin-top: 13px; font-size: 1.35rem; }
   .journal-editor { padding: 18px; border-radius: 16px; }
   .journal-inline-comments, .journal-inline-comment-composer { margin-left: 8px; }
+}
+
+/* 缩放安全布局：浏览器放大后，CSS 视口会变窄；所有操作区都允许换行，避免按钮被裁切。 */
+@media (max-width: 980px) {
+  .section-heading, .results-bar, .list-page-heading, .journal-header, .journal-reader-actions { flex-wrap: wrap; }
+  .section-heading > *, .results-bar > *, .list-page-heading > *, .journal-header > *, .journal-reader-actions > * { min-width: 0; }
+  .section-heading > .button, .section-heading > .button-row, .list-page-heading > .button { margin-left: auto; }
+  .site-header { gap: 16px; }
+  .calendar-toolbar { flex-wrap: wrap; }
+  .calendar-navigation { flex: 1 1 280px; min-width: 0; }
+  .calendar-navigation h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .calendar-toolbar-controls { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .calendar-view-tabs { max-width: 100%; }
+  .calendar-tool-button { flex: 0 1 auto; }
+  .access-toolbar { grid-template-columns: auto minmax(0, 1fr); }
+  .access-toolbar > span { grid-column: 2; justify-self: start; }
+  .access-card-header { grid-template-columns: auto minmax(0, 1fr); }
+  .access-card-header > .button { grid-column: 1 / -1; justify-self: start; }
+  .access-membership { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .access-add { grid-template-columns: minmax(0, 1fr) minmax(140px, .7fr) auto; }
+  .todo-panel-header { align-items: flex-start; flex-wrap: wrap; }
+  .todo-tabs { max-width: 100%; overflow-x: auto; }
+  .list-board-toolbar { flex-wrap: wrap; }
+  .list-board-toolbar > button { margin-left: auto; }
+  .journal-header-actions, .journal-editor-actions { flex-wrap: wrap; }
+  .journal-toolbar { flex-wrap: wrap; }
+  .companion-lobby-head { flex-wrap: wrap; }
+  .companion-search { flex: 1 1 280px; }
+  .project-header { grid-template-columns: auto minmax(0, 1fr); }
+  .project-header > .button-row { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  .calendar-toolbar-controls { display: grid; grid-template-columns: minmax(0, 1fr) repeat(2, minmax(0, auto)); width: 100%; }
+  .calendar-view-tabs { grid-column: 1 / -1; display: flex; width: 100%; }
+  .calendar-view-tabs button { flex: 1 1 0; }
+  .calendar-tool-button { justify-content: center; }
+  .access-membership { grid-template-columns: auto minmax(0, 1fr); }
+  .access-membership > .input, .access-membership > .role-labels, .access-membership > .button { grid-column: 2; width: 100%; }
+  .access-add { grid-template-columns: 1fr; }
+  .journal-editor-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; }
+  .journal-editor-actions > span { display: none; }
+  .journal-autosave-status { grid-column: 1 / -1; margin: 0; }
 }
