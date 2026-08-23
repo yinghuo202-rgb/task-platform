@@ -153,7 +153,7 @@ export class EntriesService {
     if (current.version !== dto.version) throw new ConflictException("手帐已被更新，请刷新后重试");
     const nextVersion = current.version + 1;
     const nextVisibility = dto.visibility ?? current.visibility;
-    const recipients = nextVisibility === "PRIVATE" ? [] : await this.notificationRecipients(current.projectId, user.id);
+    const recipients = dto.autosave || nextVisibility === "PRIVATE" ? [] : await this.notificationRecipients(current.projectId, user.id);
     await this.prisma.$transaction(async (tx) => {
       const updated = await tx.entry.update({
         where: { id },
@@ -170,10 +170,12 @@ export class EntriesService {
           version: nextVersion,
         },
       });
-      await tx.entryVersion.create({
-        data: { entryId: id, version: nextVersion, title: updated.title, contentMarkdown: updated.contentMarkdown, createdById: user.id },
-      });
-      if (recipients.length && !dto.autosave) {
+      if (!dto.autosave) {
+        await tx.entryVersion.create({
+          data: { entryId: id, version: nextVersion, title: updated.title, contentMarkdown: updated.contentMarkdown, createdById: user.id },
+        });
+      }
+      if (recipients.length) {
         await tx.notification.createMany({
           data: recipients.map(({ userId }) => ({
             userId,

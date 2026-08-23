@@ -30,6 +30,10 @@ beforeEach(() => {
     if (path.endsWith("/comments")) return { data: [], requestId: "comments" };
     const id = path.split("/").at(-1);
     const record = records.find((item) => item.id === id) ?? records[0];
+    if (options?.method === "PATCH") {
+      const payload = JSON.parse(options.body ?? "{}") as { title: string; contentMarkdown: string; entryDate: string; version: number };
+      return { data: { ...record, ...payload, entryDate: `${payload.entryDate}T00:00:00.000Z`, category: null, tags: [], visibility: "PUBLIC", version: payload.version + 1 }, requestId: "save" };
+    }
     return { data: { ...record, contentMarkdown: `${record.title}正文`, category: null, tags: [], visibility: "PUBLIC", version: 1 }, requestId: id };
   });
   HTMLElement.prototype.setPointerCapture = vi.fn();
@@ -117,6 +121,30 @@ describe("JournalWorkspace", () => {
     expect(screen.queryByText("分类")).not.toBeInTheDocument();
     expect(screen.queryByText("标签")).not.toBeInTheDocument();
     expect(screen.queryByText("仅自己可见")).not.toBeInTheDocument();
+  });
+
+  it("keeps body input local and autosaves only after a quiet pause", async () => {
+    render(<JournalWorkspace />);
+    await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
+    await userEvent.click(screen.getByRole("button", { name: "编辑" }));
+    const body = screen.getByPlaceholderText("写下今天发生的事，也可以直接粘贴 Markdown");
+    apiFetch.mockClear();
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(body, { target: { value: "第一行" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(3_999); });
+      expect(apiFetch.mock.calls.some(([, options]) => options?.method === "PATCH")).toBe(false);
+
+      fireEvent.change(body, { target: { value: "第一行\n第二行" } });
+      await act(async () => { await vi.advanceTimersByTimeAsync(4_120); });
+
+      const saves = apiFetch.mock.calls.filter(([, options]) => options?.method === "PATCH");
+      expect(saves).toHaveLength(1);
+      expect(JSON.parse(saves[0]?.[1]?.body ?? "{}")).toMatchObject({ contentMarkdown: "第一行\n第二行", autosave: true });
+      expect(body).toHaveValue("第一行\n第二行");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("opens the selected journal in the reader when its stream card is clicked", async () => {

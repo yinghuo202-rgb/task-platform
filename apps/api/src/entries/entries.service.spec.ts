@@ -95,6 +95,45 @@ describe("EntriesService private-space permissions", () => {
     }));
   });
 
+  it("keeps autosaves lightweight without notifications or version snapshots", async () => {
+    const current = {
+      id: "entry-id", projectId: "project-id", type: "JOURNAL", title: "今天", contentMarkdown: "旧正文",
+      entryDate: new Date("2026-08-23T00:00:00.000Z"), rating: null, category: null, tags: [], visibility: "PUBLIC",
+      status: "PUBLISHED", createdById: "admin-id", updatedById: "admin-id", version: 1,
+    };
+    const findUnique = vi.fn().mockResolvedValueOnce(current).mockResolvedValueOnce({ ...current, contentMarkdown: "新正文", version: 2, createdBy: {}, updatedBy: {}, versions: [] });
+    const entryUpdate = vi.fn().mockResolvedValue({ ...current, contentMarkdown: "新正文", version: 2 });
+    const entryVersionCreate = vi.fn();
+    const notificationCreateMany = vi.fn();
+    const memberFindMany = vi.fn();
+    const prisma = {
+      entry: { findUnique },
+      projectMember: { findMany: memberFindMany },
+      $transaction: vi.fn().mockImplementation(async (callback) => callback({
+        entry: { update: entryUpdate },
+        entryVersion: { create: entryVersionCreate },
+        notification: { createMany: notificationCreateMany },
+      })),
+    } as unknown as PrismaService;
+    const service = new EntriesService(prisma, new ConfigService(), storage);
+
+    await service.update({ id: "admin-id", sessionId: "session", role: "ADMIN" }, "entry-id", {
+      type: "JOURNAL",
+      title: "今天",
+      contentMarkdown: "新正文",
+      entryDate: "2026-08-23",
+      visibility: "PUBLIC",
+      tags: [],
+      version: 1,
+      autosave: true,
+    });
+
+    expect(entryUpdate).toHaveBeenCalled();
+    expect(memberFindMany).not.toHaveBeenCalled();
+    expect(entryVersionCreate).not.toHaveBeenCalled();
+    expect(notificationCreateMany).not.toHaveBeenCalled();
+  });
+
   it("keeps a calendar date unchanged when an ISO value contains a positive timezone", async () => {
     const findMany = vi.fn().mockResolvedValue([]);
     const prisma = {
