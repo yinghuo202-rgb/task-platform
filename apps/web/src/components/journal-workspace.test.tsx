@@ -127,7 +127,7 @@ describe("JournalWorkspace", () => {
     render(<JournalWorkspace />);
     await screen.findByRole("heading", { name: "第一篇" }, { timeout: 5_000 });
     await userEvent.click(screen.getByRole("button", { name: "编辑" }));
-    const body = screen.getByPlaceholderText("写下今天发生的事，也可以直接粘贴 Markdown");
+    const body = screen.getByRole("textbox", { name: "正文" });
     apiFetch.mockClear();
     vi.useFakeTimers();
     try {
