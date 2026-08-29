@@ -8,6 +8,9 @@ export class ApiError extends Error {
 
 type Envelope<T> = { data: T; meta?: Record<string, unknown>; requestId: string };
 
+let refreshRequest: Promise<boolean> | null = null;
+const REFRESH_EXEMPT_PATHS = new Set(["/auth/login", "/auth/register", "/auth/refresh"]);
+
 function csrfToken(): string {
   if (typeof document === "undefined") return "";
   const part = document.cookie.split("; ").find((item) => item.startsWith("csrf_token="));
@@ -20,9 +23,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, retry = 
   if (init.body && !(init.body instanceof FormData)) headers.set("content-type", "application/json");
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) headers.set("x-csrf-token", csrfToken());
   const response = await fetchResponse(`/api/v1${path}`, { ...init, headers, credentials: "include" });
-  if (response.status === 401 && retry && path !== "/auth/refresh") {
-    const refreshed = await fetchResponse("/api/v1/auth/refresh", { method: "POST", credentials: "include" });
-    if (refreshed.ok) return apiFetch<T>(path, init, false);
+  if (response.status === 401 && retry && !REFRESH_EXEMPT_PATHS.has(path)) {
+    if (await refreshSession()) return apiFetch<T>(path, init, false);
   }
   const raw = await response.text();
   const payload = parsePayload(raw);
@@ -35,6 +37,25 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, retry = 
   }
   if (!payload || !("data" in payload)) throw new ApiError("服务器返回格式不正确", 502, "INVALID_RESPONSE");
   return payload as Envelope<T>;
+}
+
+function refreshSession(): Promise<boolean> {
+  if (refreshRequest) return refreshRequest;
+  refreshRequest = runSessionRefresh().finally(() => { refreshRequest = null; });
+  return refreshRequest;
+}
+
+async function runSessionRefresh(): Promise<boolean> {
+  const refresh = async () => {
+    const active = await fetchResponse("/api/v1/auth/me", { method: "GET", credentials: "include" });
+    if (active.ok) return true;
+    const response = await fetchResponse("/api/v1/auth/refresh", { method: "POST", credentials: "include" });
+    return response.ok;
+  };
+  if (typeof navigator !== "undefined" && navigator.locks) {
+    return navigator.locks.request("la-vie-session-refresh", refresh);
+  }
+  return refresh();
 }
 
 async function fetchResponse(input: RequestInfo | URL, init: RequestInit): Promise<Response> {

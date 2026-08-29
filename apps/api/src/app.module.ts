@@ -32,7 +32,7 @@ import { UsersModule } from "./users/users.module";
         JWT_ACCESS_SECRET: Joi.string().min(32).required(),
         JWT_REFRESH_SECRET: Joi.string().min(32).required(),
         JWT_ACCESS_EXPIRES_IN: Joi.string().pattern(/^\d+[smhd]$/).default("15m"),
-        JWT_REFRESH_EXPIRES_IN: Joi.string().pattern(/^\d+[smhd]$/).default("30d"),
+        JWT_REFRESH_EXPIRES_IN: Joi.string().pattern(/^\d+[smhd]$/).default("180d"),
         PUBLIC_APP_URL: Joi.string().uri().required(),
         ALLOWED_ORIGINS: Joi.string().allow("").default(""),
         REGISTRATION_INVITE_CODE: Joi.string().allow("").min(12).default(""),

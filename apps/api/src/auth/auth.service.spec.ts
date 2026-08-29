@@ -105,4 +105,12 @@ describe("AuthService", () => {
     await harness.service.logout("a17bbfa6-bc5a-4364-ab86-b8e8f87a6862", harness.res);
     expect(harness.res.clearCookie).toHaveBeenCalledWith("access_token", expect.objectContaining({ secure: true, domain: "tasks.example.test" }));
   });
+
+  it("does not clear a fresh device session when a stale refresh request fails", async () => {
+    const harness = createHarness();
+    const request = { ...harness.req, cookies: { refresh_token: "stale-token" } } as unknown as Request;
+
+    await expect(harness.service.refresh(request, harness.res)).rejects.toThrow("刷新会话已失效");
+    expect(harness.res.clearCookie).not.toHaveBeenCalled();
+  });
 });

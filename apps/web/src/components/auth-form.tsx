@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { loginSchema, registerSchema, type LoginInput, type RegisterInput } from "@task-platform/shared-validation";
@@ -10,6 +11,12 @@ import { useAuth } from "@/lib/auth";
 import { Button, Field, Input } from "./ui";
 
 export function AuthForm({ mode }: { mode: "login" | "register" }) {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  useEffect(() => {
+    if (!loading && user) router.replace("/dashboard");
+  }, [loading, router, user]);
+  if (loading || user) return <div className="loading">正在恢复登录…</div>;
   return mode === "login" ? <LoginForm /> : <RegisterForm />;
 }
 

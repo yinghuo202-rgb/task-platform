@@ -238,19 +238,21 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
 
-### 从旧版本在线更新到 v1.18.0
+### 从旧版本在线更新到 v1.19.0
 
 保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.18.0
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.18.0
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.18.0
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.19.0
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.19.0
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.19.0
 ```
 
 然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
 
 导入页面会显示“新增/跳过”数量。如果提示导入目录没有 Markdown，说明迁移包还没有解压，或只把 zip 文件放进了目录；请把迁移包内的 `journal-import-manifest.json`、`entries/` 和 `assets/` 放在 `JOURNAL_IMPORT_PATH` 对应目录的根部，再点击导入。
+
+v1.19.0 增强同一设备的自动登录：多个请求或标签页会协调恢复会话，已有会话打开登录页时直接进入工作空间；默认设备会话延长为 180 天并在成功恢复时顺延。更新已有 NAS 时请同时把 `.env` 中的 `JWT_REFRESH_EXPIRES_IN` 改为 `180d`。
 
 v1.18.0 为手机端提供专用的全屏文档编辑模式：保存与状态固定在顶部，标题和日期压缩为轻量元信息，正文独占剩余空间并独立滚动，适配虚拟键盘和长文输入。
 v1.17.0 重构手帐编辑器的自动保存：正文输入不再驱动整页重绘，停止输入 4 秒后才在空闲时保存，自动保存不再生成历史快照或提醒；同时优化桌面和手机端的编辑布局与中文输入体验。
