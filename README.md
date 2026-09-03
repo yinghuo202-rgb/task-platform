@@ -230,27 +230,47 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 `.env.nas.example` 已预置群晖路径；Intel 极空间直接使用 `.env.zspace.example`。生产 `compose.yaml` 仅包含 `image`，并固定为 `linux/amd64`，源码构建被隔离在 `compose.build.yaml`，因此 NAS 端不会意外执行本地构建。
 
-推送 `v*` Git 标签后，[镜像发布工作流](./.github/workflows/release-images.yml) 会为 proxy、web、api 构建并推送 `linux/amd64` 镜像到 GHCR。升级应用时，把 `.env` 中三个应用镜像的版本号改为新版本，然后运行：
+推送 `v*` Git 标签后，[镜像发布工作流](./.github/workflows/release-images.yml) 会为 proxy、web、api 构建并推送 `linux/amd64` 镜像到 GHCR，同时更新 `stable` 通道并在 Releases 生成 NAS 更新包。NAS 的 `.env` 只需固定使用以下地址，不再逐次修改版本号：
+
+```bash
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:stable
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:stable
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:stable
+AUTO_PRUNE_APP_IMAGES=true
+```
+
+手动检查并在线更新：
 
 ```bash
 ./infrastructure/scripts/update.sh
 ```
 
-更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
+更新脚本会先拉取并比较镜像摘要；没有更新时不会备份或重启。有更新时才会完整备份数据库和文件、确认三个组件来自同一版本、保留当前镜像为 `previous`、重建容器并检查健康状态。失败时自动恢复上一组镜像；成功后只保留当前和上一版本，并删除更旧的应用镜像。PostgreSQL 镜像、数据库、上传文件和备份不会被清理。
 
-### 从旧版本在线更新到 v1.19.0
+可在 NAS 的定时任务中每 6 小时执行一次，避免进入 Compose 页面：
 
-保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
-
-```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.19.0
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.19.0
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.19.0
+```cron
+15 */6 * * * cd /path/to/task-platform && sh ./infrastructure/scripts/update.sh >> ./data/auto-update.log 2>&1
 ```
 
-然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
+更新脚本使用原子锁避免任务重叠。建议仍然保留 `BACKUP_RETENTION_DAYS=30`，不要对本项目执行无范围限制的 `docker image prune -a`。
+
+### 从旧版本在线更新到 v1.20.0
+
+第一次启用自动更新时，从 GitHub Releases 下载 `task-platform-nas-update-kit-v1.20.0.tar.gz` 并解压到现有 Compose 项目目录。保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把应用镜像及清理开关改为：
+
+```bash
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:stable
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:stable
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:stable
+AUTO_PRUNE_APP_IMAGES=true
+```
+
+然后在 Compose 项目目录运行 `sh ./infrastructure/scripts/update.sh`，或把同一命令加入 NAS 定时任务。API 启动时会自动执行已提交的数据库迁移。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
 
 导入页面会显示“新增/跳过”数量。如果提示导入目录没有 Markdown，说明迁移包还没有解压，或只把 zip 文件放进了目录；请把迁移包内的 `journal-import-manifest.json`、`entries/` 和 `assets/` 放在 `JOURNAL_IMPORT_PATH` 对应目录的根部，再点击导入。
+
+v1.20.0 加入 `stable` 在线更新通道、无更新免重启、更新前备份、组件版本一致性校验、健康检查自动回滚，以及只保留当前和上一版本的精确镜像清理；发布流水线同时生成可直接覆盖到 NAS 项目目录的更新包。
 
 v1.19.0 增强同一设备的自动登录：多个请求或标签页会协调恢复会话，已有会话打开登录页时直接进入工作空间；默认设备会话延长为 180 天并在成功恢复时顺延。更新已有 NAS 时请同时把 `.env` 中的 `JWT_REFRESH_EXPIRES_IN` 改为 `180d`。
 
