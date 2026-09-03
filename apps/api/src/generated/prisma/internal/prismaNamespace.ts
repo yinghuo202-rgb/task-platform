@@ -2204,6 +2204,7 @@ export const TaskScalarFieldEnum = {
   rewardType: 'rewardType',
   rewardAmount: 'rewardAmount',
   rewardDescription: 'rewardDescription',
+  rewardOptions: 'rewardOptions',
   rewardFulfillmentStatus: 'rewardFulfillmentStatus',
   locationType: 'locationType',
   locationDescription: 'locationDescription',

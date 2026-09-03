@@ -79,7 +79,9 @@ export class AuthService {
       await this.rotateSession(session.id, session.user, res);
       return publicUser(session.user);
     } catch {
-      this.clearCookies(res);
+      // A second tab can still be holding the token that was rotated by the
+      // first tab. Do not let that stale request erase the fresh device
+      // session cookies that were just issued to the browser.
       throw new UnauthorizedException("刷新会话已失效");
     }
   }
@@ -126,7 +128,7 @@ export class AuthService {
         userId: user.id,
         refreshTokenHash: placeholder,
         csrfToken,
-        expiresAt: new Date(Date.now() + durationMs(this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "30d"), 30 * 24 * 60 * 60 * 1000)),
+        expiresAt: new Date(Date.now() + durationMs(this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "180d"), 180 * 24 * 60 * 60 * 1000)),
         ...clientInfo(req),
       },
     });
@@ -140,7 +142,7 @@ export class AuthService {
     existingCsrf?: string,
   ): Promise<void> {
     const accessMaxAge = durationMs(this.config.get<string>("JWT_ACCESS_EXPIRES_IN", "15m"), 15 * 60 * 1000);
-    const refreshMaxAge = durationMs(this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "30d"), 30 * 24 * 60 * 60 * 1000);
+    const refreshMaxAge = durationMs(this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "180d"), 180 * 24 * 60 * 60 * 1000);
     const access = await this.sign({ sub: user.id, sid: sessionId, role: user.role, type: "access" }, "JWT_ACCESS_SECRET", "JWT_ACCESS_EXPIRES_IN");
     const refresh = await this.sign({ sub: user.id, sid: sessionId, role: user.role, type: "refresh" }, "JWT_REFRESH_SECRET", "JWT_REFRESH_EXPIRES_IN");
     const csrfToken = existingCsrf ?? randomBytes(32).toString("base64url");

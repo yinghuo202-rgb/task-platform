@@ -101,6 +101,7 @@ export type TaskSummary = {
   rewardType: "POINTS" | "CASH_OFFLINE" | "ITEM" | "SERVICE" | "OTHER";
   rewardAmount: string | null;
   rewardDescription: string | null;
+  rewardOptions: string[];
   locationType: "REMOTE" | "ONSITE" | "HYBRID" | "UNSPECIFIED";
   locationDescription: string | null;
   timeMode: "BEFORE" | "WITHIN" | "AT";

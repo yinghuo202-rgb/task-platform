@@ -230,27 +230,66 @@ docker compose up -d --force-recreate reverse-proxy api web
 
 `.env.nas.example` 已预置群晖路径；Intel 极空间直接使用 `.env.zspace.example`。生产 `compose.yaml` 仅包含 `image`，并固定为 `linux/amd64`，源码构建被隔离在 `compose.build.yaml`，因此 NAS 端不会意外执行本地构建。
 
-推送 `v*` Git 标签后，[镜像发布工作流](./.github/workflows/release-images.yml) 会为 proxy、web、api 构建并推送 `linux/amd64` 镜像到 GHCR。升级应用时，把 `.env` 中三个应用镜像的版本号改为新版本，然后运行：
+推送 `v*` Git 标签后，[镜像发布工作流](./.github/workflows/release-images.yml) 会为 proxy、web、api、maintenance 构建并推送 `linux/amd64` 镜像到 GHCR，同时更新 `stable` 通道并在 Releases 生成 NAS 更新包。NAS 的 `.env` 只需固定使用以下地址，不再逐次修改版本号：
 
 ```bash
-./infrastructure/scripts/update.sh
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:stable
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:stable
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:stable
+MAINTENANCE_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-maintenance:stable
+AUTO_PRUNE_APP_IMAGES=true
+MAINTENANCE_AUTO_UPDATE=false
 ```
 
-更新脚本会校验 Compose、完整备份数据库和文件、拉取镜像、重建容器并检查健康状态。成功配置保存为 `.env.last-successful`；失败配置另存后会尝试恢复上一次成功版本。数据库和文件始终保留在 NAS 持久化目录中。
-
-### 从旧版本在线更新到 v1.11.0
-
-保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，只把三条应用镜像改为：
+极空间不需要宿主机 SSH。打开 Docker 项目中的 `maintenance` 容器终端，运行：
 
 ```bash
-PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:v1.11.0
-WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:v1.11.0
-API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:v1.11.0
+la-vie-update
 ```
 
-然后在 Compose 项目目录运行 `./infrastructure/scripts/update.sh`。脚本会先备份再在线拉取镜像；API 启动时会自动执行数据库迁移并导入 57 条「一起做的事」。不要重新初始化 PostgreSQL 目录，也不要再次导入旧镜像包。
+维护容器通过 Docker Socket 定位本项目现有的 proxy、web、api 容器，因此不依赖极空间内部项目路径，也不会重新解析相对数据目录。命令会先拉取并比较镜像摘要；没有更新时不会备份或重启。有更新时才会完整备份数据库和文件、确认三个组件来自同一版本、保留当前镜像为 `previous`，然后只重建这三个应用容器并检查健康状态。失败时自动恢复上一组镜像；成功后只保留当前和上一版本，并删除更旧的应用镜像。PostgreSQL 镜像、数据库、上传文件和备份不会被清理。
+
+如需完全自动检查，在 `.env` 中设置：
+
+```bash
+MAINTENANCE_AUTO_UPDATE=true
+UPDATE_INTERVAL_SECONDS=21600
+```
+
+然后在极空间中重新创建一次 `maintenance` 容器。它会每 6 小时检查一次，首次检查在容器启动 6 小时后进行；仍可随时进入终端手动运行 `la-vie-update`。更新脚本使用原子锁避免任务重叠。建议保留 `BACKUP_RETENTION_DAYS=30`，不要对本项目执行无范围限制的 `docker image prune -a`。
+
+`/var/run/docker.sock` 等同于 Docker 管理权限，只应挂载到本项目提供的 maintenance 镜像；不要向公网开放该容器端口，也不要在其中运行来源不明的命令。maintenance 不暴露网络端口，并且只更新带有明确启用标签且属于本项目的三个应用容器。
+
+### 从 v1.20.0 或更早版本启用容器内更新
+
+从 GitHub Releases 下载最新的 `task-platform-nas-update-kit-v*.tar.gz`，用其中的 `compose.yaml` 替换极空间项目配置。保留现有 `.env` 中的 `POSTGRES_PASSWORD`、`DATABASE_URL`、两条 JWT 密钥和全部数据路径，并补充：
+
+```bash
+PROXY_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-proxy:stable
+WEB_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-web:stable
+API_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-api:stable
+MAINTENANCE_IMAGE=ghcr.io/yinghuo202-rgb/task-platform-maintenance:stable
+AUTO_PRUNE_APP_IMAGES=true
+MAINTENANCE_AUTO_UPDATE=false
+UPDATE_INTERVAL_SECONDS=21600
+UPDATE_HEALTH_ATTEMPTS=36
+```
+
+在极空间中重新创建项目一次，等待 `maintenance` 显示健康。以后更新应用只需进入该容器终端运行 `la-vie-update`，不再下载离线镜像包。API 启动时会自动执行已提交的数据库迁移。不要重新初始化 PostgreSQL 目录。
 
 导入页面会显示“新增/跳过”数量。如果提示导入目录没有 Markdown，说明迁移包还没有解压，或只把 zip 文件放进了目录；请把迁移包内的 `journal-import-manifest.json`、`entries/` 和 `assets/` 放在 `JOURNAL_IMPORT_PATH` 对应目录的根部，再点击导入。
+
+v1.21.0 将在线升级能力放进独立 maintenance 容器，适配只能进入容器终端的极空间环境；更新不依赖宿主机项目路径，可手动一条命令执行或按间隔自动检查，同时保留备份、组件版本一致性校验、健康检查回滚和精确镜像清理。
+
+v1.20.0 加入 `stable` 在线更新通道、无更新免重启、更新前备份、组件版本一致性校验、健康检查自动回滚，以及只保留当前和上一版本的精确镜像清理；发布流水线同时生成可直接覆盖到 NAS 项目目录的更新包。
+
+v1.19.0 增强同一设备的自动登录：多个请求或标签页会协调恢复会话，已有会话打开登录页时直接进入工作空间；默认设备会话延长为 180 天并在成功恢复时顺延。更新已有 NAS 时请同时把 `.env` 中的 `JWT_REFRESH_EXPIRES_IN` 改为 `180d`。
+
+v1.18.0 为手机端提供专用的全屏文档编辑模式：保存与状态固定在顶部，标题和日期压缩为轻量元信息，正文独占剩余空间并独立滚动，适配虚拟键盘和长文输入。
+v1.17.0 重构手帐编辑器的自动保存：正文输入不再驱动整页重绘，停止输入 4 秒后才在空闲时保存，自动保存不再生成历史快照或提醒；同时优化桌面和手机端的编辑布局与中文输入体验。
+v1.16.0 将日历改为全屏工作区、把奖励合并到清单，并让手帐单次换行生成独立段落；同时修复手机端错位与横向溢出。
+v1.15.0 优化缩放场景下的响应式布局，避免导航、日历和编辑操作按钮被裁切或隐藏。
+v1.14.0 优化手帐长文本输入，并支持由发布者自定义多项奖励、接取后单选其中一项；新增奖励选项数据库迁移。
 
 v1.10.0 为首页日历内置中国历并默认开启，覆盖法定节假日、调休上班、二十四节气和常用传统节日；计算在浏览器本地完成，NAS 运行时不依赖外网。工具栏可随时隐藏中国历，选择会保存在当前设备。法定节假日数据应在国务院发布下一年度安排后随应用版本更新。
 
@@ -387,12 +426,11 @@ SHA256SUMS
 NAS 生产环境只升级镜像，不拉取源码、不执行 `docker compose build`：
 
 ```bash
-# 先在 .env 中把 PROXY_IMAGE、WEB_IMAGE、API_IMAGE 改为同一新版本
-./infrastructure/scripts/update.sh
-docker compose ps
+# 在极空间的 maintenance 容器终端中执行
+la-vie-update
 ```
 
-不要删除 NAS 的三个持久化目录或修改已有 migration。数据库迁移由 API 镜像启动时串行执行；多节点部署时应改为独立 migration job。
+如果 NAS 具备真正的宿主机 SSH，也可以继续使用 `infrastructure/scripts/update.sh`。不要删除 NAS 的持久化目录或修改已有 migration。数据库迁移由 API 镜像启动时串行执行；多节点部署时应改为独立 migration job。
 
 ## 上传限制
 

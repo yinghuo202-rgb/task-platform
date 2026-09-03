@@ -23,7 +23,7 @@ export function SiteHeader() {
     <nav className="mobile-nav" aria-label="移动端导航">
       <Link href="/"><House /><span>日历</span></Link>
       <Link href={user ? "/journal" : "/login"}><PenLine /><span>手帐</span></Link>
-      {user ? <Link className="mobile-primary" href="/tasks"><Sparkles /><span>大厅</span></Link> : <Link className="mobile-primary" href="/login"><LogIn /><span>登录</span></Link>}
+      {user ? <Link className="mobile-primary" href="/tasks"><Sparkles /><span>清单</span></Link> : <Link className="mobile-primary" href="/login"><LogIn /><span>登录</span></Link>}
       <Link href={user ? "/notifications" : "/login"}><Bell /><span>提醒</span></Link>
     </nav>
   </>;

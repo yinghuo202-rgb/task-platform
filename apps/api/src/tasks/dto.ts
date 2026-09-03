@@ -55,8 +55,8 @@ export class CreateTaskDto {
   @IsString() @MinLength(1) @MaxLength(20_000)
   description!: string;
 
-  @IsString() @MinLength(1) @MaxLength(50)
-  category!: string;
+  @IsOptional() @IsString() @MaxLength(50)
+  category?: string;
 
   @IsEnum(Visibility)
   visibility!: Visibility;
@@ -75,6 +75,9 @@ export class CreateTaskDto {
 
   @IsOptional() @IsString() @MaxLength(500)
   rewardDescription?: string | null;
+
+  @IsOptional() @IsArray() @ArrayMaxSize(8) @IsString({ each: true }) @MaxLength(500, { each: true })
+  rewardOptions?: string[];
 
   @IsEnum(LocationType)
   locationType!: LocationType;

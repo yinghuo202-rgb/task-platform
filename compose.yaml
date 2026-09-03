@@ -25,6 +25,8 @@ services:
       - /tmp
     security_opt:
       - no-new-privileges:true
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     logging: *default-logging
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/proxy-health"]
@@ -47,6 +49,8 @@ services:
       - /tmp
     security_opt:
       - no-new-privileges:true
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     logging: *default-logging
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
@@ -80,7 +84,7 @@ services:
       JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET}"
       REGISTRATION_INVITE_CODE: "${REGISTRATION_INVITE_CODE:-}"
       JWT_ACCESS_EXPIRES_IN: "${JWT_ACCESS_EXPIRES_IN:-15m}"
-      JWT_REFRESH_EXPIRES_IN: "${JWT_REFRESH_EXPIRES_IN:-30d}"
+      JWT_REFRESH_EXPIRES_IN: "${JWT_REFRESH_EXPIRES_IN:-180d}"
       PUBLIC_APP_URL: "${PUBLIC_APP_URL}"
       ALLOWED_ORIGINS: "${ALLOWED_ORIGINS:-}"
       COOKIE_SECURE: "${COOKIE_SECURE:-false}"
@@ -104,6 +108,8 @@ services:
       - /tmp
     security_opt:
       - no-new-privileges:true
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     logging: *default-logging
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/v1/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
@@ -138,6 +144,49 @@ services:
       timeout: 5s
       retries: 20
       start_period: 60s
+
+  maintenance:
+    image: "${MAINTENANCE_IMAGE:-ghcr.io/yinghuo202-rgb/task-platform-maintenance:stable}"
+    platform: "${APP_PLATFORM:-linux/amd64}"
+    pull_policy: "${IMAGE_PULL_POLICY:-missing}"
+    restart: unless-stopped
+    environment:
+      COMPOSE_PROJECT_NAME: task-platform
+      PROXY_IMAGE: "${PROXY_IMAGE}"
+      WEB_IMAGE: "${WEB_IMAGE}"
+      API_IMAGE: "${API_IMAGE}"
+      DATABASE_URL: "${DATABASE_URL}"
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      BACKUP_RETENTION_DAYS: "${BACKUP_RETENTION_DAYS:-30}"
+      AUTO_PRUNE_APP_IMAGES: "${AUTO_PRUNE_APP_IMAGES:-true}"
+      MAINTENANCE_AUTO_UPDATE: "${MAINTENANCE_AUTO_UPDATE:-false}"
+      UPDATE_INTERVAL_SECONDS: "${UPDATE_INTERVAL_SECONDS:-21600}"
+      UPDATE_HEALTH_ATTEMPTS: "${UPDATE_HEALTH_ATTEMPTS:-36}"
+      TZ: "${TZ:-Asia/Shanghai}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "${UPLOAD_DATA_PATH:-./data/uploads}:/data/uploads:ro"
+      - "${JOURNAL_IMPORT_PATH:-./data/journal-import}:/data/journal-import:ro"
+      - "${BACKUP_DATA_PATH:-./data/backups}:/data/backups"
+    depends_on:
+      - db
+      - reverse-proxy
+    networks: [frontend, backend]
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD-SHELL", "docker info >/dev/null 2>&1 && pg_dump --version >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
 networks:
   frontend:

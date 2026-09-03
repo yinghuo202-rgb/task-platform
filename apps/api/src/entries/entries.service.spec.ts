@@ -18,9 +18,15 @@ describe("EntriesService private-space permissions", () => {
       createdAt: new Date(),
       author: { id: "admin-id", username: "yinghuo202", displayName: "萤火" },
     }));
+    const notificationCreateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const transaction = vi.fn().mockImplementation(async (callback) => callback({
+      entryComment: { create },
+      notification: { createMany: notificationCreateMany },
+    }));
     const prisma = {
       entry: { findUnique: vi.fn().mockResolvedValue({ projectId: "project-id", visibility: "PUBLIC", createdById: "author-id", status: "PUBLISHED" }) },
-      entryComment: { create },
+      projectMember: { findMany: vi.fn().mockResolvedValue([{ userId: "author-id" }]) },
+      $transaction: transaction,
     } as unknown as PrismaService;
     const service = new EntriesService(prisma, new ConfigService(), storage);
 
@@ -33,6 +39,7 @@ describe("EntriesService private-space permissions", () => {
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
       data: { entryId: "entry-id", authorId: "admin-id", content: "我也记得", anchorBlock: 3, anchorQuote: "那天一起散步" },
     }));
+    expect(notificationCreateMany).toHaveBeenCalledWith({ data: [{ userId: "author-id", type: "SYSTEM", title: "手帐收到新评论", content: "我也记得", targetPath: "/journal?entry=entry-id" }] });
   });
 
   it("does not let a viewer create a hand journal entry", async () => {
@@ -86,6 +93,45 @@ describe("EntriesService private-space permissions", () => {
         OR: [{ visibility: "PUBLIC" }, { visibility: "PRIVATE", createdById: user.id }],
       }),
     }));
+  });
+
+  it("keeps autosaves lightweight without notifications or version snapshots", async () => {
+    const current = {
+      id: "entry-id", projectId: "project-id", type: "JOURNAL", title: "今天", contentMarkdown: "旧正文",
+      entryDate: new Date("2026-08-23T00:00:00.000Z"), rating: null, category: null, tags: [], visibility: "PUBLIC",
+      status: "PUBLISHED", createdById: "admin-id", updatedById: "admin-id", version: 1,
+    };
+    const findUnique = vi.fn().mockResolvedValueOnce(current).mockResolvedValueOnce({ ...current, contentMarkdown: "新正文", version: 2, createdBy: {}, updatedBy: {}, versions: [] });
+    const entryUpdate = vi.fn().mockResolvedValue({ ...current, contentMarkdown: "新正文", version: 2 });
+    const entryVersionCreate = vi.fn();
+    const notificationCreateMany = vi.fn();
+    const memberFindMany = vi.fn();
+    const prisma = {
+      entry: { findUnique },
+      projectMember: { findMany: memberFindMany },
+      $transaction: vi.fn().mockImplementation(async (callback) => callback({
+        entry: { update: entryUpdate },
+        entryVersion: { create: entryVersionCreate },
+        notification: { createMany: notificationCreateMany },
+      })),
+    } as unknown as PrismaService;
+    const service = new EntriesService(prisma, new ConfigService(), storage);
+
+    await service.update({ id: "admin-id", sessionId: "session", role: "ADMIN" }, "entry-id", {
+      type: "JOURNAL",
+      title: "今天",
+      contentMarkdown: "新正文",
+      entryDate: "2026-08-23",
+      visibility: "PUBLIC",
+      tags: [],
+      version: 1,
+      autosave: true,
+    });
+
+    expect(entryUpdate).toHaveBeenCalled();
+    expect(memberFindMany).not.toHaveBeenCalled();
+    expect(entryVersionCreate).not.toHaveBeenCalled();
+    expect(notificationCreateMany).not.toHaveBeenCalled();
   });
 
   it("keeps a calendar date unchanged when an ISO value contains a positive timezone", async () => {

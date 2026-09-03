@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock3, Gamepad2, History, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, Gamepad2, Gift, History, Sparkles } from "lucide-react";
 import type { TaskSummary } from "@task-platform/shared-types";
 import { apiFetch, ApiError } from "@/lib/api";
 import { personalTaskTimeLabel } from "@/lib/task-time";
@@ -45,7 +45,7 @@ export function PersonalOrderHistory() {
           <button className={view === "history" ? "active" : ""} role="tab" aria-selected={view === "history"} onClick={() => setView("history")}><History size={16} />历史接单 <span>{history.length}</span></button>
         </div>
         {visible.length ? <div className="order-history-list">{visible.map((task) => <Link href={`/tasks/${task.id}`} className="order-history-row" key={task.id}>
-          <span className="order-service-icon">{serviceEmoji(task.category)}</span>
+          <span className="order-service-icon"><Gift size={19} /></span>
           <span className="order-history-main"><strong>{task.title}</strong><small><i style={{ background: task.project.color }} />{task.project.name} · {task.personalAssignedAt ? `${formatDate(task.personalAssignedAt)} 接取` : "接取时间待记录"}</small></span>
           <span className="order-history-time"><Clock3 size={15} />{personalTaskTimeLabel(task, task.status === "COMPLETED")}</span>
           <StatusBadge status={task.personalAssignmentStatus ?? task.status} />
@@ -58,20 +58,4 @@ export function PersonalOrderHistory() {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "numeric", day: "numeric" }).format(new Date(value));
-}
-
-function serviceEmoji(category: string) {
-  if (category.includes("游戏")) return "🎮";
-  if (category.includes("阅读")) return "📚";
-  if (category.includes("运动")) return "🏃";
-  if (category.includes("影音")) return "🎬";
-  if (category.includes("音乐")) return "🎧";
-  if (category.includes("订单")) return "🧾";
-  if (category.includes("商品")) return "📦";
-  if (category.includes("视觉")) return "🎨";
-  if (category.includes("活动")) return "🎉";
-  if (category.includes("客服")) return "💬";
-  if (category.includes("库存")) return "🗃️";
-  if (category.includes("数据")) return "📊";
-  return "🌈";
 }

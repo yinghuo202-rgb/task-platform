@@ -7,16 +7,10 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { TaskCard } from "./task-card";
 import { Button, EmptyState, Input } from "./ui";
 
-const categories = [
-  "",
-  "一起做", "家务", "采购", "约会", "健康", "记录", "其他",
-];
-
 export function TaskList({ projectId }: { projectId?: string }) {
   const params = useSearchParams();
   const [filters, setFilters] = useState({
     search: params.get("search") ?? "",
-    category: params.get("category") ?? "",
     status: params.get("status") ?? "",
     sort: params.get("sort") ?? "createdAt",
   });
@@ -43,7 +37,6 @@ export function TaskList({ projectId }: { projectId?: string }) {
   return <>
     <div className="filters" aria-label="清单筛选">
       <Input className="search" aria-label="关键词搜索" placeholder="搜索事情标题或内容" value={filters.search} onChange={(event) => set("search", event.target.value)} />
-      <select className="input" aria-label="分类" value={filters.category} onChange={(event) => set("category", event.target.value)}>{categories.map((value) => <option key={value} value={value}>{value || "全部分类"}</option>)}</select>
       <select className="input" aria-label="状态" value={filters.status} onChange={(event) => set("status", event.target.value)}><option value="">全部状态</option><option value="PUBLISHED">等人来做</option><option value="CLAIMED">已安排</option><option value="IN_PROGRESS">进行中</option><option value="COMPLETED">已完成</option></select>
       <select className="input" aria-label="排序" value={filters.sort} onChange={(event) => set("sort", event.target.value)}><option value="createdAt">最近写下</option><option value="deadline">时间最近</option></select>
     </div>

@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer";
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from "class-validator";
 import { EntryType, Visibility } from "../generated/prisma/enums";
 
 export class ListEntriesDto {
@@ -82,6 +82,10 @@ export class UpdateEntryDto extends CreateEntryDto {
   @IsInt()
   @Min(1)
   version!: number;
+
+  @IsOptional()
+  @IsBoolean()
+  autosave?: boolean;
 }
 
 export class CreateEntryCommentDto {

@@ -153,7 +153,7 @@ export class EntriesService {
     if (current.version !== dto.version) throw new ConflictException("手帐已被更新，请刷新后重试");
     const nextVersion = current.version + 1;
     const nextVisibility = dto.visibility ?? current.visibility;
-    const recipients = nextVisibility === "PRIVATE" ? [] : await this.notificationRecipients(current.projectId, user.id);
+    const recipients = dto.autosave || nextVisibility === "PRIVATE" ? [] : await this.notificationRecipients(current.projectId, user.id);
     await this.prisma.$transaction(async (tx) => {
       const updated = await tx.entry.update({
         where: { id },
@@ -170,9 +170,11 @@ export class EntriesService {
           version: nextVersion,
         },
       });
-      await tx.entryVersion.create({
-        data: { entryId: id, version: nextVersion, title: updated.title, contentMarkdown: updated.contentMarkdown, createdById: user.id },
-      });
+      if (!dto.autosave) {
+        await tx.entryVersion.create({
+          data: { entryId: id, version: nextVersion, title: updated.title, contentMarkdown: updated.contentMarkdown, createdById: user.id },
+        });
+      }
       if (recipients.length) {
         await tx.notification.createMany({
           data: recipients.map(({ userId }) => ({
@@ -271,15 +273,32 @@ export class EntriesService {
     const entry = await this.assertEntryAccess(entryId, user);
     await this.assertProjectCanWrite(entry.projectId, user);
     if (!dto.content.trim()) throw new BadRequestException("留言不能为空");
-    const comment = await this.prisma.entryComment.create({
-      data: {
-        entryId,
-        authorId: user.id,
-        content: dto.content.trim(),
-        anchorBlock: dto.anchorBlock,
-        anchorQuote: dto.anchorQuote?.trim().slice(0, 500) || null,
-      },
-      include: { author: { select: publicUser } },
+    const recipients = entry.visibility === "PRIVATE"
+      ? (entry.createdById === user.id ? [] : [{ userId: entry.createdById }])
+      : await this.notificationRecipients(entry.projectId, user.id);
+    const comment = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.entryComment.create({
+        data: {
+          entryId,
+          authorId: user.id,
+          content: dto.content.trim(),
+          anchorBlock: dto.anchorBlock,
+          anchorQuote: dto.anchorQuote?.trim().slice(0, 500) || null,
+        },
+        include: { author: { select: publicUser } },
+      });
+      if (recipients.length) {
+        await tx.notification.createMany({
+          data: recipients.map(({ userId }) => ({
+            userId,
+            type: "SYSTEM" as const,
+            title: "手帐收到新评论",
+            content: created.content,
+            targetPath: `/journal?entry=${entryId}`,
+          })),
+        });
+      }
+      return created;
     });
     return { ...comment, canDelete: true };
   }

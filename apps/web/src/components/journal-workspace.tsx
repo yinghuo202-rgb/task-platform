@@ -23,6 +23,8 @@ const JOURNAL_TICK_WINDOW = 160;
 const JOURNAL_DETAIL_CACHE_TTL = 30_000;
 const JOURNAL_STREAM_COMMIT_DELAY = 32;
 const JOURNAL_CARD_DRAG_RATIO = JOURNAL_TICK_HEIGHT / 140;
+const JOURNAL_AUTOSAVE_DELAY = 4_000;
+const JOURNAL_AUTOSAVE_IDLE_TIMEOUT = 1_200;
 
 export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string } = {}) {
   const [records, setRecords] = useState<EntryIndex[]>([]);
@@ -58,6 +60,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   const streamPositionRef = useRef(0);
   const entryCacheRef = useRef(new Map<string, CachedValue<Entry>>());
   const commentsCacheRef = useRef(new Map<string, CachedValue<EntryComment[]>>());
+  const editorSavedEntryRef = useRef<Entry | null>(null);
   const currentRecordIdRef = useRef<string | undefined>(undefined);
   const userScrolledRef = useRef(false);
 
@@ -134,6 +137,15 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
   }, []);
 
   useEffect(() => { void loadIndex(initialEntryId); }, [initialEntryId, loadIndex]);
+  useEffect(() => {
+    const className = "journal-scroll-locked";
+    document.documentElement.classList.toggle(className, view === "stream");
+    document.body.classList.toggle(className, view === "stream");
+    return () => {
+      document.documentElement.classList.remove(className);
+      document.body.classList.remove(className);
+    };
+  }, [view]);
   useEffect(() => () => {
     if (detailTimerRef.current) clearTimeout(detailTimerRef.current);
     entryAbortRef.current?.abort();
@@ -277,7 +289,18 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
+  const applySavedEntry = (saved: Entry) => {
+    entryCacheRef.current.set(saved.id, { value: saved, cachedAt: Date.now() });
+    setEntryDetails((current) => ({ ...current, [saved.id]: saved }));
+    const nextRecords = upsertEntryIndex(records, saved);
+    setRecords(nextRecords);
+    setActiveIndex(Math.max(0, nextRecords.findIndex((record) => record.id === saved.id)));
+    setStreamPosition(Math.max(0, nextRecords.findIndex((record) => record.id === saved.id)));
+    setSelected(saved);
+  };
+
   const openEditor = (entry?: Entry) => {
+    editorSavedEntryRef.current = null;
     setEditor(entry ? {
       id: entry.id,
       version: entry.version,
@@ -292,40 +315,54 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
     } : emptyEditor());
   };
 
-  const saveEntry = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!editor?.title.trim()) { setError("请填写标题"); return; }
-    setSaving(true);
-    setError("");
+  const closeEditor = () => {
+    if (editorSavedEntryRef.current) applySavedEntry(editorSavedEntryRef.current);
+    editorSavedEntryRef.current = null;
+    setEditor(null);
+  };
+
+  const persistEntry = async (draft: EditorState, options: { silent?: boolean } = {}): Promise<Entry | null> => {
+    const silent = Boolean(options.silent);
+    if (!draft.title.trim()) { if (!silent) setError("请填写标题"); return null; }
+    if (!silent) {
+      setSaving(true);
+      setError("");
+    }
     try {
       const payload = {
-        type: editor.type,
-        title: editor.title.trim(),
-        entryDate: editor.entryDate,
-        rating: editor.rating ? Number(editor.rating) : null,
-        category: editor.category.trim() || null,
-        tags: editor.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
-        visibility: editor.visibility,
-        contentMarkdown: editor.contentMarkdown,
-        ...(editor.id ? { version: editor.version } : {}),
+        type: draft.type,
+        title: draft.title.trim(),
+        entryDate: draft.entryDate,
+        rating: draft.rating ? Number(draft.rating) : null,
+        category: draft.category.trim() || null,
+        tags: draft.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+        visibility: draft.visibility,
+        contentMarkdown: draft.contentMarkdown,
+        ...(draft.id ? { version: draft.version } : {}),
+        ...(draft.id && options.silent ? { autosave: true } : {}),
       };
-      const response = await apiFetch<Entry>(editor.id ? `/entries/${editor.id}` : "/entries", { method: editor.id ? "PATCH" : "POST", body: JSON.stringify(payload) });
+      const response = await apiFetch<Entry>(draft.id ? `/entries/${draft.id}` : "/entries", { method: draft.id ? "PATCH" : "POST", body: JSON.stringify(payload) });
       const saved = response.data;
       entryCacheRef.current.set(saved.id, { value: saved, cachedAt: Date.now() });
-      setEntryDetails((current) => ({ ...current, [saved.id]: saved }));
-      if (!editor.id) commentsCacheRef.current.set(saved.id, { value: [], cachedAt: Date.now() });
-      const nextRecords = upsertEntryIndex(records, saved);
-      setRecords(nextRecords);
-      setActiveIndex(Math.max(0, nextRecords.findIndex((record) => record.id === saved.id)));
-      setStreamPosition(Math.max(0, nextRecords.findIndex((record) => record.id === saved.id)));
-      setSelected(saved);
-      if (!editor.id) setComments([]);
-      setEditor(null);
+      if (silent) {
+        editorSavedEntryRef.current = saved;
+        return saved;
+      }
+      applySavedEntry(saved);
+      if (!draft.id) commentsCacheRef.current.set(saved.id, { value: [], cachedAt: Date.now() });
+      if (!draft.id) setComments([]);
+      return saved;
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "保存失败");
+      if (!silent) setError(err instanceof ApiError ? err.message : "保存失败");
+      return null;
     } finally {
-      setSaving(false);
+      if (!silent) setSaving(false);
     }
+  };
+
+  const saveEntry = async (draft: EditorState) => {
+    const saved = await persistEntry(draft);
+    if (saved) setEditor(null);
   };
 
   const importEntries = async () => {
@@ -419,7 +456,7 @@ export function JournalWorkspace({ initialEntryId }: { initialEntryId?: string }
       {view === "stream" && <StreamView records={records} position={streamPosition} entries={entryDetails} detailLoading={detailLoading} railRef={railRef} onSelect={selectIndex} onScroll={onRailScroll} onPointerDown={onRailPointerDown} onPointerMove={onRailPointerMove} onPointerUp={onRailPointerUp} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={(entry) => openEditor(entry)} onOpenReader={(index) => { selectIndex(index); setView("reader"); }} />}
       {view === "reader" && <ReaderView activeIndex={activeIndex} count={records.length} entry={currentEntry} loading={detailLoading} comments={comments} commentsLoading={commentsLoading} commentAnchor={commentAnchor} commentValue={commentText} commentSaving={commentSaving} onSelect={selectIndex} onRetry={() => currentRecordId && void loadEntry(currentRecordId)} onEdit={() => currentEntry && openEditor(currentEntry)} onRequestComment={setCommentAnchor} onCancelComment={() => { setCommentAnchor(null); setCommentText(""); }} onCommentChange={setCommentText} onCommentSubmit={submitComment} onRemoveComment={(id) => void removeComment(id)} />}
     </>}
-    {editor && <EntryEditor editor={editor} saving={saving} onChange={setEditor} onClose={() => setEditor(null)} onDelete={() => void removeEntry()} onSubmit={saveEntry} />}
+    {editor && <EntryEditor key={`${editor.id ?? "new"}-${editor.version}`} editor={editor} saving={saving} onClose={closeEditor} onDelete={() => void removeEntry()} onSubmit={saveEntry} onAutoSave={(draft) => persistEntry(draft, { silent: true })} />}
   </div></section>;
 }
 
@@ -452,12 +489,11 @@ function StreamView({ records, position, entries, detailLoading, railRef, onSele
     if (!rail || event.button !== 0) return;
     suppressClickRef.current = false;
     deckGestureRef.current = { y: event.clientY, scrollTop: rail.scrollTop, moved: false };
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
   const onDeckPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     const rail = railRef.current;
     const gesture = deckGestureRef.current;
-    if (!rail || !gesture || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    if (!rail || !gesture) return;
     const delta = event.clientY - gesture.y;
     if (Math.abs(delta) > 8) gesture.moved = true;
     if (gesture.moved) rail.scrollTop = gesture.scrollTop - delta * JOURNAL_CARD_DRAG_RATIO;
@@ -465,9 +501,18 @@ function StreamView({ records, position, entries, detailLoading, railRef, onSele
   const onDeckPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
     const moved = deckGestureRef.current?.moved ?? false;
     deckGestureRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    const target = event.target as HTMLElement;
+    const card = target.closest<HTMLElement>("[data-stream-index]");
+    const isControl = Boolean(target.closest("button, a, input, textarea, select"));
     if (moved) {
       suppressClickRef.current = true;
+      window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+    } else if (card && !isControl) {
+      // Pointer capture used to make a tap on a card land on the deck instead of
+      // the card's click handler on mobile browsers. Open on pointer-up as a
+      // fallback while preserving drag gestures.
+      suppressClickRef.current = true;
+      onOpenReader(Number(card.dataset.streamIndex));
       window.setTimeout(() => { suppressClickRef.current = false; }, 0);
     }
   };
@@ -487,6 +532,7 @@ function StreamView({ records, position, entries, detailLoading, railRef, onSele
         aria-current={active ? "true" : undefined}
         aria-label={`打开《${record.title}》的翻页视图`}
         className={`journal-entry-card journal-stream-card${active ? " active" : ""}`}
+        data-stream-index={index}
         key={record.id}
         onClick={(event) => activateCard(index, event.target)}
         onKeyDown={(event) => {
@@ -696,8 +742,121 @@ function CommentableMarkdown({ entryId, value, comments, commentsLoading, active
   </div>;
 }
 
-function EntryEditor({ editor, saving, onChange, onClose, onDelete, onSubmit }: { editor: EditorState; saving: boolean; onChange: (value: EditorState) => void; onClose: () => void; onDelete: () => void; onSubmit: (event: React.FormEvent) => void }) {
-  return <div className="journal-editor-backdrop"><section className="journal-editor" role="dialog" aria-modal="true" aria-labelledby="journal-editor-title"><header><div><span className="eyebrow">WRITE IT DOWN</span><h2 id="journal-editor-title">{editor.id ? "编辑手帐" : "写手帐"}</h2></div><button type="button" aria-label="关闭" onClick={onClose}><X size={19} /></button></header><form className="form-stack" onSubmit={onSubmit}><Field label="标题" required><Input autoFocus value={editor.title} onChange={(event) => onChange({ ...editor, title: event.target.value })} placeholder="例如：周末一起去散步" maxLength={160} /></Field><Field label="日期" required><Input type="date" value={editor.entryDate} onChange={(event) => onChange({ ...editor, entryDate: event.target.value })} /></Field><Field label="正文"><Textarea className="journal-editor-textarea" value={editor.contentMarkdown} onChange={(event) => onChange({ ...editor, contentMarkdown: event.target.value })} placeholder="写下今天发生的事，也可以直接粘贴 Markdown" maxLength={100000} /></Field><div className="journal-editor-actions">{editor.id && <Button className="danger" disabled={saving} type="button" onClick={onDelete}>移入归档</Button>}<span /><Button className="secondary" type="button" onClick={onClose}>取消</Button><Button disabled={saving} type="submit">{saving ? "保存中…" : "保存"}</Button></div></form></section></div>;
+const EntryEditor = memo(function EntryEditor({ editor, saving, onClose, onDelete, onSubmit, onAutoSave }: { editor: EditorState; saving: boolean; onClose: () => void; onDelete: () => void; onSubmit: (draft: EditorState) => void | Promise<void>; onAutoSave: (draft: EditorState) => Promise<Entry | null> }) {
+  const [draft, setDraft] = useState(editor);
+  const [autoSaveState, setAutoSaveState] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
+  const draftRef = useRef(draft);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const idleSaveCancelRef = useRef<(() => void) | null>(null);
+  const autoSaveInFlightRef = useRef(false);
+  const autoSavePromiseRef = useRef<Promise<Entry | null> | null>(null);
+  const autoSavePendingRef = useRef(false);
+  const composingRef = useRef(false);
+  const lastSavedFingerprintRef = useRef(editorFingerprint(editor));
+  const scheduleLatestRef = useRef<() => void>(() => undefined);
+  const onAutoSaveRef = useRef(onAutoSave);
+  useEffect(() => { onAutoSaveRef.current = onAutoSave; }, [onAutoSave]);
+
+  const cancelScheduledSave = useCallback(() => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = null;
+    idleSaveCancelRef.current?.();
+    idleSaveCancelRef.current = null;
+  }, []);
+
+  const runAutoSave = useCallback(async (snapshot: EditorState) => {
+    if (autoSaveInFlightRef.current) { autoSavePendingRef.current = true; return; }
+    const fingerprint = editorFingerprint(snapshot);
+    if (fingerprint === lastSavedFingerprintRef.current) { setAutoSaveState("saved"); return; }
+    autoSaveInFlightRef.current = true;
+    setAutoSaveState("saving");
+    const request = onAutoSaveRef.current(snapshot);
+    autoSavePromiseRef.current = request;
+    const saved = await request;
+    autoSavePromiseRef.current = null;
+    autoSaveInFlightRef.current = false;
+    const changedWhileSaving = draftRef.current !== snapshot;
+    if (saved) {
+      lastSavedFingerprintRef.current = fingerprint;
+      const savedVersion = { id: saved.id, version: saved.version };
+      draftRef.current = { ...draftRef.current, ...savedVersion };
+      setDraft((current) => current.id === saved.id && current.version === saved.version ? current : { ...current, ...savedVersion });
+      if (!changedWhileSaving) {
+        setAutoSaveState("saved");
+      }
+    } else {
+      setAutoSaveState("error");
+    }
+    if (autoSavePendingRef.current || changedWhileSaving) {
+      autoSavePendingRef.current = false;
+      scheduleLatestRef.current();
+    }
+  }, []);
+
+  const queueIdleSave = useCallback(() => {
+    const save = () => {
+      idleSaveCancelRef.current = null;
+      void runAutoSave(draftRef.current);
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(save, { timeout: JOURNAL_AUTOSAVE_IDLE_TIMEOUT });
+      idleSaveCancelRef.current = () => window.cancelIdleCallback(id);
+      return;
+    }
+    const id = window.setTimeout(save, 120);
+    idleSaveCancelRef.current = () => window.clearTimeout(id);
+  }, [runAutoSave]);
+
+  const scheduleLatest = useCallback(() => {
+    cancelScheduledSave();
+    const next = draftRef.current;
+    if (!next.title.trim()) { setAutoSaveState("idle"); return; }
+    if (composingRef.current) return;
+    if (autoSaveInFlightRef.current) { autoSavePendingRef.current = true; return; }
+    setAutoSaveState("pending");
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSaveTimerRef.current = null;
+      queueIdleSave();
+    }, JOURNAL_AUTOSAVE_DELAY);
+  }, [cancelScheduledSave, queueIdleSave]);
+  useEffect(() => { scheduleLatestRef.current = scheduleLatest; }, [scheduleLatest]);
+  useEffect(() => () => cancelScheduledSave(), [cancelScheduledSave]);
+  const update = useCallback((patch: Partial<EditorState>) => {
+    const next = { ...draftRef.current, ...patch };
+    draftRef.current = next;
+    setDraft(next);
+    scheduleLatestRef.current();
+  }, []);
+  const updateContent = useCallback((contentMarkdown: string) => {
+    draftRef.current = { ...draftRef.current, contentMarkdown };
+    scheduleLatestRef.current();
+  }, []);
+  const finishComposition = () => {
+    composingRef.current = false;
+    scheduleLatestRef.current();
+  };
+  const submitLatest = async () => {
+    cancelScheduledSave();
+    if (autoSavePromiseRef.current) await autoSavePromiseRef.current;
+    cancelScheduledSave();
+    await onSubmit(draftRef.current);
+  };
+  const closeLatest = async () => {
+    cancelScheduledSave();
+    if (autoSavePromiseRef.current) await autoSavePromiseRef.current;
+    cancelScheduledSave();
+    if (!draftRef.current.title.trim()) { onClose(); return; }
+    if (editorFingerprint(draftRef.current) !== lastSavedFingerprintRef.current) {
+      await runAutoSave(draftRef.current);
+    }
+    if (editorFingerprint(draftRef.current) === lastSavedFingerprintRef.current) onClose();
+  };
+  const autoSaveLabel = autoSaveState === "pending" ? "停止输入 4 秒后自动保存" : autoSaveState === "saving" ? "正在后台保存…" : autoSaveState === "saved" ? "已自动保存" : autoSaveState === "error" ? "自动保存失败，可点击保存重试" : "输入标题后自动保存";
+  return <div className="journal-editor-backdrop"><section className="journal-editor" role="dialog" aria-modal="true" aria-labelledby="journal-editor-title"><header><div><span className="eyebrow">WRITE IT DOWN</span><h2 id="journal-editor-title">{draft.id ? "编辑手帐" : "写手帐"}</h2><small className={`journal-editor-mobile-status state-${autoSaveState}`}>{autoSaveLabel}</small></div><button type="button" aria-label="关闭" onClick={() => void closeLatest()}><X size={19} /></button><Button className="journal-editor-mobile-save" disabled={saving} form="journal-editor-form" type="submit">{saving ? "保存中" : "保存"}</Button></header><form className="form-stack journal-editor-form" id="journal-editor-form" onSubmit={(event) => { event.preventDefault(); void submitLatest(); }}><Field label="标题" required><Input autoFocus value={draft.title} onChange={(event) => update({ title: event.target.value })} onCompositionStart={() => { composingRef.current = true; cancelScheduledSave(); }} onCompositionEnd={finishComposition} placeholder="写个标题…" maxLength={160} /></Field><Field label="日期" required><Input type="date" value={draft.entryDate} onChange={(event) => update({ entryDate: event.target.value })} /></Field><Field label="正文"><Textarea className="journal-editor-textarea" defaultValue={editor.contentMarkdown} onChange={(event) => updateContent(event.target.value)} onCompositionStart={() => { composingRef.current = true; cancelScheduledSave(); }} onCompositionEnd={(event) => { draftRef.current = { ...draftRef.current, contentMarkdown: event.currentTarget.value }; finishComposition(); }} placeholder="从这里开始写…" maxLength={100000} spellCheck /></Field><div className="journal-editor-actions"><small className={`journal-autosave-status state-${autoSaveState}`} aria-live="polite">{autoSaveLabel}</small>{draft.id && <Button className="danger" disabled={saving} type="button" onClick={onDelete}>移入归档</Button>}<span /><Button className="secondary" type="button" onClick={() => void closeLatest()}>关闭</Button><Button disabled={saving} type="submit">{saving ? "保存中…" : "保存"}</Button></div></form></section></div>;
+});
+
+function editorFingerprint(draft: EditorState) {
+  return JSON.stringify([draft.type, draft.title, draft.entryDate, draft.rating, draft.category, draft.tags, draft.contentMarkdown, draft.visibility]);
 }
 
 const MarkdownPreview = memo(function MarkdownPreview({ value, compact = false }: { value: string; compact?: boolean }) {
@@ -726,7 +885,7 @@ function markdownBlockText(block: MarkdownBlock) {
   return block.text;
 }
 function normalizeAnchorText(value: string) { return value.replace(/\s+/g, " ").trim().slice(0, 500); }
-function parseMarkdown(value: string): MarkdownBlock[] {
+export function parseMarkdown(value: string): MarkdownBlock[] {
   const lines = value.trim() ? value.replace(/\r/g, "").split("\n") : ["还没有写下正文。"];
   const blocks: MarkdownBlock[] = [];
   let index = 0;
@@ -754,9 +913,9 @@ function parseMarkdown(value: string): MarkdownBlock[] {
       while (index < lines.length) { const item = (lines[index] ?? "").match(/^\s*(?:([-*+])|(\d+)\.)\s+(.+)$/); if (!item || Boolean(item[2]) !== ordered) break; items.push(item[3]!); index += 1; }
       blocks.push({ type: "list", ordered, items }); continue;
     }
-    const paragraph = [line.trim()]; index += 1;
-    while (index < lines.length && (lines[index] ?? "").trim() && !/^(#{1,6})\s+|^```|^>\s?|^\s*(?:[-*+]|\d+\.)\s+|^!\[[^\]]*\]\([^)]+\)$/.test(lines[index] ?? "")) { paragraph.push((lines[index] ?? "").trim()); index += 1; }
-    blocks.push({ type: "paragraph", text: paragraph.join(" ") });
+    // 手帐以自然换行为段落边界：输入一次回车，正文和评论锚点都生成独立的一段。
+    blocks.push({ type: "paragraph", text: line.trim() });
+    index += 1;
   }
   return blocks;
 }

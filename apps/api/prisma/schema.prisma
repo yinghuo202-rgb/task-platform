@@ -368,6 +368,7 @@ model Task {
   rewardType              RewardType
   rewardAmount            Decimal?                @db.Decimal(18, 2)
   rewardDescription       String?                 @db.VarChar(500)
+  rewardOptions           String[]                @default([])
   rewardFulfillmentStatus RewardFulfillmentStatus @default(NOT_APPLICABLE)
   locationType            LocationType
   locationDescription     String?                 @db.VarChar(500)

@@ -7,7 +7,6 @@ import type { CalendarEvent as PersonalCalendarEvent, CalendarFeedEvent, Calenda
 import { apiFetch, ApiError } from "@/lib/api";
 import { chinaCalendarEvents, type ChinaCalendarKind } from "@/lib/china-calendar";
 import { personalTaskTimeLabel } from "@/lib/task-time";
-import { HomeReminderStrip } from "./home-reminder-strip";
 import { Button, Field, Input, Textarea } from "./ui";
 
 export type CalendarView = "month" | "week" | "three-day" | "day";
@@ -52,15 +51,11 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
   const [subscriptionOpen, setSubscriptionOpen] = useState(openSubscriptions);
   const [subscriptionBusy, setSubscriptionBusy] = useState("");
   const [showChinaCalendar, setShowChinaCalendar] = useState(true);
-  const [currentTime, setCurrentTime] = useState(0);
   const eventMutationRef = useRef(new Map<string, number>());
 
   useEffect(() => {
     if (window.matchMedia("(max-width: 640px)").matches) setView("day");
     if (window.localStorage.getItem(CHINA_CALENDAR_SETTING) === "off") setShowChinaCalendar(false);
-    setCurrentTime(Date.now());
-    const timer = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
-    return () => window.clearInterval(timer);
   }, []);
 
   const range = useMemo(() => calendarRange(anchor, view), [anchor, view]);
@@ -118,11 +113,6 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
 
   const selectedItems = useMemo(() => items.filter((item) => occursOn(item, selectedDate)), [items, selectedDate]);
   const unscheduledTasks = useMemo(() => tasks.filter((task) => !task.personalDueAt && !task.deadline && task.personalAssignmentStatus !== "COMPLETED" && task.personalAssignmentStatus !== "CANCELLED"), [tasks]);
-  const upcomingSchedule = useMemo(() => {
-    const next = items.find((item) => item.source !== "entry" && item.source !== "china-calendar" && item.end.getTime() >= currentTime);
-    return next ? { title: next.title, startsAt: next.start } : null;
-  }, [currentTime, items]);
-
   const openCreate = (date = selectedDate) => {
     setEditingId(null);
     setConfirmingDelete(false);
@@ -241,7 +231,6 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
   });
 
   return <div className="calendar-page">
-    <HomeReminderStrip upcoming={upcomingSchedule} />
     <section className="calendar-surface">
       <div className="calendar-toolbar">
         <div className="calendar-navigation"><button onClick={goToday}>今天</button><button aria-label="上一段时间" onClick={() => navigate(-1)}><ChevronLeft size={18} /></button><button aria-label="下一段时间" onClick={() => navigate(1)}><ChevronRight size={18} /></button><h2>{rangeLabel(anchor, view)}</h2></div>
