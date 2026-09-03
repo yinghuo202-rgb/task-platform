@@ -41,7 +41,14 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - name: Validate NAS maintenance scripts
-        run: sh -n infrastructure/scripts/backup.sh infrastructure/scripts/prune-app-images.sh infrastructure/scripts/restore.sh infrastructure/scripts/update.sh
+        run: >-
+          sh -n
+          infrastructure/scripts/backup.sh
+          infrastructure/scripts/prune-app-images.sh
+          infrastructure/scripts/restore.sh
+          infrastructure/scripts/update.sh
+          infrastructure/maintenance/entrypoint.sh
+          infrastructure/maintenance/update.sh
       - name: Prepare integration database
         env:
           DATABASE_URL: postgresql://task_platform:integration_test_only@127.0.0.1:5432/task_platform_test
@@ -67,6 +74,9 @@ jobs:
           - name: api
             context: .
             file: apps/api/Dockerfile
+          - name: maintenance
+            context: .
+            file: infrastructure/maintenance/Dockerfile
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -112,6 +122,9 @@ jobs:
           tar -czf "$archive" \
             compose.yaml \
             .env.zspace.example \
+            infrastructure/maintenance/Dockerfile \
+            infrastructure/maintenance/entrypoint.sh \
+            infrastructure/maintenance/update.sh \
             infrastructure/scripts/backup.sh \
             infrastructure/scripts/prune-app-images.sh \
             infrastructure/scripts/restore.sh \
