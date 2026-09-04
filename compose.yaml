@@ -66,8 +66,11 @@ services:
     pull_policy: "${IMAGE_PULL_POLICY:-missing}"
     restart: "no"
     user: "0:0"
-    entrypoint: ["sh", "-c"]
-    command: "mkdir -p /data/uploads/journal && (chown -R 10001:10001 /data/uploads || chmod -R a+rwX /data/uploads)"
+    entrypoint:
+      - /bin/sh
+      - -ec
+      - mkdir -p /data/uploads/journal && (chown -R 10001:10001 /data/uploads || chmod -R a+rwX /data/uploads)
+    command: []
     volumes:
       - "${UPLOAD_DATA_PATH:-./data/uploads}:/data/uploads"
 
