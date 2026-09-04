@@ -17,6 +17,22 @@ type ImportResult = { imported: number; skipped: number; comments?: number; asse
 type EditorState = { id: string | null; version: number; type: EntryKind; title: string; entryDate: string; rating: string; category: string; tags: string; contentMarkdown: string; visibility: "PUBLIC" | "PRIVATE" };
 type CachedValue<T> = { value: T; cachedAt: number };
 
+const JOURNAL_AUTHOR_TONE_COUNT = 6;
+
+export function journalAuthorTone(author: Pick<EntryAuthor, "id" | "username">) {
+  const identity = (author.username || author.id).trim().toLowerCase();
+  let hash = 2166136261;
+  for (let index = 0; index < identity.length; index += 1) {
+    hash ^= identity.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash >>> 0) % JOURNAL_AUTHOR_TONE_COUNT;
+}
+
+function journalAuthorToneClass(author: Pick<EntryAuthor, "id" | "username">) {
+  return `journal-author-tone-${journalAuthorTone(author)}`;
+}
+
 const emptyEditor = (): EditorState => ({ id: null, version: 1, type: "JOURNAL", title: "", entryDate: toDateInput(new Date()), rating: "", category: "", tags: "", contentMarkdown: "", visibility: "PUBLIC" });
 const JOURNAL_TICK_HEIGHT = 24;
 const JOURNAL_TICK_WINDOW = 160;
@@ -531,7 +547,7 @@ function StreamView({ records, position, entries, detailLoading, railRef, onSele
       return <article
         aria-current={active ? "true" : undefined}
         aria-label={`打开《${record.title}》的翻页视图`}
-        className={`journal-entry-card journal-stream-card${active ? " active" : ""}`}
+        className={`journal-entry-card journal-stream-card ${journalAuthorToneClass(record.createdBy)}${active ? " active" : ""}`}
         data-stream-index={index}
         key={record.id}
         onClick={(event) => activateCard(index, event.target)}
@@ -653,7 +669,7 @@ function ReaderView({ activeIndex, count, entry, loading, comments, commentsLoad
   return <div className="journal-reader-shell">
     <article
       aria-label="手帐正文，左右滑动切换上下篇"
-      className={`journal-reader${dragging ? " dragging" : ""}`}
+      className={`journal-reader${entry ? ` ${journalAuthorToneClass(entry.createdBy)}` : ""}${dragging ? " dragging" : ""}`}
       onContextMenu={(event) => {
         const target = event.target as HTMLElement;
         if (target.closest("button, a, input, textarea, [data-inline-comment]")) return;
@@ -726,7 +742,7 @@ function CommentableMarkdown({ entryId, value, comments, commentsLoading, active
       >
         {renderMarkdownBlock(block, `content-${index}`)}
         {blockComments.length > 0 && <div className="journal-inline-comments" data-inline-comment>
-          {blockComments.map((comment, commentIndex) => <article className={`journal-inline-comment hue-${commentIndex % 4}`} key={comment.id}>
+          {blockComments.map((comment) => <article className={`journal-inline-comment ${journalAuthorToneClass(comment.author)}`} key={comment.id}>
             <span className="journal-comment-avatar" aria-hidden="true">{comment.author.displayName.slice(0, 1)}</span>
             <div><div className="journal-comment-head"><strong>{comment.author.displayName}</strong><time dateTime={comment.createdAt}>{formatCommentTime(comment.createdAt)}</time>{comment.canDelete && <button type="button" aria-label="删除这条评论" onClick={() => onRemoveComment(comment.id)}><Trash2 size={13} /></button>}</div><p>{comment.content}</p></div>
           </article>)}
