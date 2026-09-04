@@ -399,6 +399,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   User: 'User',
   CalendarEvent: 'CalendarEvent',
+  CalendarTodo: 'CalendarTodo',
   Entry: 'Entry',
   EntryVersion: 'EntryVersion',
   EntryComment: 'EntryComment',
@@ -433,7 +434,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "calendarEvent" | "entry" | "entryVersion" | "entryComment" | "calendarSubscription" | "authSession" | "project" | "projectMember" | "sharedWish" | "task" | "taskRequirement" | "taskAttachment" | "taskApplication" | "applicationAttachment" | "taskAssignment" | "taskSubmission" | "submissionAttachment" | "taskComment" | "notification" | "auditLog"
+    modelProps: "user" | "calendarEvent" | "calendarTodo" | "entry" | "entryVersion" | "entryComment" | "calendarSubscription" | "authSession" | "project" | "projectMember" | "sharedWish" | "task" | "taskRequirement" | "taskAttachment" | "taskApplication" | "applicationAttachment" | "taskAssignment" | "taskSubmission" | "submissionAttachment" | "taskComment" | "notification" | "auditLog"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -582,6 +583,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.CalendarEventCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.CalendarEventCountAggregateOutputType> | number
+        }
+      }
+    }
+    CalendarTodo: {
+      payload: Prisma.$CalendarTodoPayload<ExtArgs>
+      fields: Prisma.CalendarTodoFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CalendarTodoFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CalendarTodoFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>
+        }
+        findFirst: {
+          args: Prisma.CalendarTodoFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CalendarTodoFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>
+        }
+        findMany: {
+          args: Prisma.CalendarTodoFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>[]
+        }
+        create: {
+          args: Prisma.CalendarTodoCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>
+        }
+        createMany: {
+          args: Prisma.CalendarTodoCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CalendarTodoCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>[]
+        }
+        delete: {
+          args: Prisma.CalendarTodoDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>
+        }
+        update: {
+          args: Prisma.CalendarTodoUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>
+        }
+        deleteMany: {
+          args: Prisma.CalendarTodoDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CalendarTodoUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CalendarTodoUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>[]
+        }
+        upsert: {
+          args: Prisma.CalendarTodoUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CalendarTodoPayload>
+        }
+        aggregate: {
+          args: Prisma.CalendarTodoAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCalendarTodo>
+        }
+        groupBy: {
+          args: Prisma.CalendarTodoGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CalendarTodoGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CalendarTodoCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CalendarTodoCountAggregateOutputType> | number
         }
       }
     }
@@ -2064,6 +2139,22 @@ export const CalendarEventScalarFieldEnum = {
 export type CalendarEventScalarFieldEnum = (typeof CalendarEventScalarFieldEnum)[keyof typeof CalendarEventScalarFieldEnum]
 
 
+export const CalendarTodoScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  title: 'title',
+  note: 'note',
+  dueAt: 'dueAt',
+  allDay: 'allDay',
+  completedAt: 'completedAt',
+  position: 'position',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CalendarTodoScalarFieldEnum = (typeof CalendarTodoScalarFieldEnum)[keyof typeof CalendarTodoScalarFieldEnum]
+
+
 export const EntryScalarFieldEnum = {
   id: 'id',
   projectId: 'projectId',
@@ -2479,6 +2570,20 @@ export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+
+
+
+/**
  * Reference to a field of type 'EntryType'
  */
 export type EnumEntryTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'EntryType'>
@@ -2517,20 +2622,6 @@ export type EnumVisibilityFieldRefInput<$PrismaModel> = FieldRefInputType<$Prism
  * Reference to a field of type 'Visibility[]'
  */
 export type ListEnumVisibilityFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Visibility[]'>
-
-
-
-/**
- * Reference to a field of type 'Int'
- */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-
-
-
-/**
- * Reference to a field of type 'Int[]'
- */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
 
 
 
@@ -2910,6 +3001,7 @@ export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaC
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   calendarEvent?: Prisma.CalendarEventOmit
+  calendarTodo?: Prisma.CalendarTodoOmit
   entry?: Prisma.EntryOmit
   entryVersion?: Prisma.EntryVersionOmit
   entryComment?: Prisma.EntryCommentOmit

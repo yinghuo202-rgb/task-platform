@@ -3,7 +3,7 @@ import { ApiTags } from "@nestjs/swagger";
 import type { AuthUser } from "../common/auth-context";
 import { CurrentUser } from "../common/decorators";
 import { CalendarService } from "./calendar.service";
-import { CalendarRangeDto, CreateCalendarEventDto, RespondCalendarSubscriptionDto, UpdateCalendarEventDto } from "./dto";
+import { CalendarRangeDto, CreateCalendarEventDto, CreateCalendarTodoDto, RespondCalendarSubscriptionDto, UpdateCalendarEventDto, UpdateCalendarTodoDto } from "./dto";
 
 @ApiTags("Calendar")
 @Controller("calendar")
@@ -28,6 +28,26 @@ export class CalendarController {
   @Delete("events/:id")
   remove(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     return this.calendar.remove(user.id, id);
+  }
+
+  @Get("todos")
+  todos(@CurrentUser() user: AuthUser) {
+    return this.calendar.listTodos(user.id);
+  }
+
+  @Post("todos")
+  createTodo(@CurrentUser() user: AuthUser, @Body() dto: CreateCalendarTodoDto) {
+    return this.calendar.createTodo(user.id, dto);
+  }
+
+  @Patch("todos/:id")
+  updateTodo(@CurrentUser() user: AuthUser, @Param("id") id: string, @Body() dto: UpdateCalendarTodoDto) {
+    return this.calendar.updateTodo(user.id, id, dto);
+  }
+
+  @Delete("todos/:id")
+  removeTodo(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.calendar.removeTodo(user.id, id);
   }
 
   @Get("feed")

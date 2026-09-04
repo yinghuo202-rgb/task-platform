@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import type { CreateCalendarEventDto, RespondCalendarSubscriptionDto, UpdateCalendarEventDto } from "./dto";
+import type { CreateCalendarEventDto, CreateCalendarTodoDto, RespondCalendarSubscriptionDto, UpdateCalendarEventDto, UpdateCalendarTodoDto } from "./dto";
 
 const publicUserSelect = {
   id: true,
@@ -212,10 +212,63 @@ export class CalendarService {
     return { success: true };
   }
 
+  listTodos(userId: string) {
+    return this.prisma.calendarTodo.findMany({
+      where: { userId },
+      orderBy: [
+        { completedAt: { sort: "asc", nulls: "first" } },
+        { dueAt: { sort: "asc", nulls: "last" } },
+        { position: "asc" },
+        { createdAt: "asc" },
+      ],
+    });
+  }
+
+  createTodo(userId: string, dto: CreateCalendarTodoDto) {
+    return this.prisma.calendarTodo.create({
+      data: {
+        userId,
+        title: dto.title.trim(),
+        note: dto.note?.trim() || null,
+        dueAt: dto.dueAt ? new Date(dto.dueAt) : null,
+        allDay: Boolean(dto.dueAt && dto.allDay),
+        position: dto.position ?? 0,
+      },
+    });
+  }
+
+  async updateTodo(userId: string, id: string, dto: UpdateCalendarTodoDto) {
+    const todo = await this.findOwnedTodo(userId, id);
+    const dueAt = dto.dueAt === undefined ? todo.dueAt : dto.dueAt ? new Date(dto.dueAt) : null;
+    return this.prisma.calendarTodo.update({
+      where: { id },
+      data: {
+        ...(dto.title === undefined ? {} : { title: dto.title.trim() }),
+        ...(dto.note === undefined ? {} : { note: dto.note.trim() || null }),
+        ...(dto.dueAt === undefined ? {} : { dueAt }),
+        ...(dto.allDay === undefined && dto.dueAt === undefined ? {} : { allDay: Boolean(dueAt && (dto.allDay ?? todo.allDay)) }),
+        ...(dto.completed === undefined ? {} : { completedAt: dto.completed ? new Date() : null }),
+        ...(dto.position === undefined ? {} : { position: dto.position }),
+      },
+    });
+  }
+
+  async removeTodo(userId: string, id: string): Promise<{ success: true }> {
+    await this.findOwnedTodo(userId, id);
+    await this.prisma.calendarTodo.delete({ where: { id } });
+    return { success: true };
+  }
+
   private async findOwned(userId: string, id: string) {
     const event = await this.prisma.calendarEvent.findFirst({ where: { id, userId } });
     if (!event) throw new NotFoundException("日程不存在");
     return event;
+  }
+
+  private async findOwnedTodo(userId: string, id: string) {
+    const todo = await this.prisma.calendarTodo.findFirst({ where: { id, userId } });
+    if (!todo) throw new NotFoundException("待办不存在");
+    return todo;
   }
 
   private assertRange(startsAt: Date, endsAt: Date): void {

@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsHexColor, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+import { IsBoolean, IsDateString, IsHexColor, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class CalendarRangeDto {
   @IsDateString()
@@ -46,6 +46,43 @@ export class UpdateCalendarEventDto {
 
   @IsOptional() @IsHexColor()
   color?: string;
+}
+
+export class CreateCalendarTodoDto {
+  @IsString() @MinLength(1) @MaxLength(160)
+  title!: string;
+
+  @IsOptional() @IsString() @MaxLength(1000)
+  note?: string;
+
+  @IsOptional() @IsDateString()
+  dueAt?: string | null;
+
+  @IsOptional() @IsBoolean()
+  allDay?: boolean;
+
+  @IsOptional() @IsInt() @Min(0) @Max(1_000_000_000)
+  position?: number;
+}
+
+export class UpdateCalendarTodoDto {
+  @IsOptional() @IsString() @MinLength(1) @MaxLength(160)
+  title?: string;
+
+  @IsOptional() @IsString() @MaxLength(1000)
+  note?: string;
+
+  @IsOptional() @IsDateString()
+  dueAt?: string | null;
+
+  @IsOptional() @IsBoolean()
+  allDay?: boolean;
+
+  @IsOptional() @IsBoolean()
+  completed?: boolean;
+
+  @IsOptional() @IsInt() @Min(0) @Max(1_000_000_000)
+  position?: number;
 }
 
 export class RespondCalendarSubscriptionDto {
