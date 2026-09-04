@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type FormEvent, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, GripVertical, ListTodo, MoreHorizontal, Pencil, Plus, SunMedium, Trash2, UserPlus, X } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, ListTodo, MoreHorizontal, Plus, SunMedium, Trash2, UserPlus, X } from "lucide-react";
 import type { CalendarEvent as PersonalCalendarEvent, CalendarFeedEvent, CalendarSubscriptionOverview, CalendarTodo, TaskSummary } from "@task-platform/shared-types";
 import { apiFetch, ApiError } from "@/lib/api";
 import { chinaCalendarEvents, type ChinaCalendarKind } from "@/lib/china-calendar";
@@ -14,14 +14,13 @@ type CalendarEntrySummary = { id: string; type: "JOURNAL" | "REVIEW"; title: str
 type CalendarEntryIndexResponse = { records: CalendarEntrySummary[]; total: number; canImport: boolean };
 type CalendarItem = {
   id: string;
-  source: "personal" | "subscribed" | "task" | "todo" | "entry" | "china-calendar";
+  source: "personal" | "subscribed" | "task" | "entry" | "china-calendar";
   title: string;
   start: Date;
   end: Date;
   color: string;
   description?: string | null;
   task?: TaskSummary;
-  todo?: CalendarTodo;
   event?: CalendarFeedEvent;
   ownerName?: string;
   entry?: CalendarEntrySummary;
@@ -29,7 +28,6 @@ type CalendarItem = {
   allDay?: boolean;
 };
 type EventForm = { title: string; description: string; startsAt: string; endsAt: string; color: string };
-type TodoForm = { id: string | null; title: string; note: string; dueAt: string; allDay: boolean };
 
 const weekLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 const colors = ["#8f86b7", "#c98f9f", "#79a89b", "#c9a36d", "#7f9db8"];
@@ -53,7 +51,7 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [subscriptionOpen, setSubscriptionOpen] = useState(openSubscriptions);
   const [todoOpen, setTodoOpen] = useState(false);
-  const [todoForm, setTodoForm] = useState<TodoForm>(() => emptyTodoForm());
+  const [todoTitle, setTodoTitle] = useState("");
   const [todoSaving, setTodoSaving] = useState(false);
   const [subscriptionBusy, setSubscriptionBusy] = useState("");
   const [showChinaCalendar, setShowChinaCalendar] = useState(true);
@@ -110,11 +108,6 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
       const dueAt = new Date(dueValue);
       return [{ id: `task-${task.id}`, source: "task" as const, title: task.title, start: dueAt, end: new Date(dueAt.getTime() + 45 * 60_000), color: task.project.color, task }];
     }),
-    ...todos.flatMap((todo) => {
-      if (!todo.dueAt || todo.completedAt) return [];
-      const dueAt = new Date(todo.dueAt);
-      return [{ id: `todo-${todo.id}`, source: "todo" as const, title: todo.title, description: todo.note, start: dueAt, end: todo.allDay ? addDays(startOfDay(dueAt), 1) : new Date(dueAt.getTime() + 30 * 60_000), color: "#d6a849", todo, allDay: todo.allDay }];
-    }),
     ...journalEntries.map((entry) => {
       const start = new Date(`${entry.entryDate.slice(0, 10)}T00:00:00`);
       return { id: `entry-${entry.id}`, source: "entry" as const, title: entry.title, start, end: addDays(start, 1), color: entry.type === "REVIEW" ? "#9b91b4" : "#86aa9e", entry, allDay: true };
@@ -123,7 +116,7 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
       const start = new Date(`${event.date}T00:00:00`);
       return { id: event.id, source: "china-calendar" as const, title: event.title, start, end: addDays(start, 1), color: event.color, calendarKind: event.kind, allDay: true };
     }),
-  ].sort((left, right) => left.start.getTime() - right.start.getTime()), [chinaEvents, events, journalEntries, tasks, todos]);
+  ].sort((left, right) => left.start.getTime() - right.start.getTime()), [chinaEvents, events, journalEntries, tasks]);
 
   const selectedItems = useMemo(() => items.filter((item) => occursOn(item, selectedDate)), [items, selectedDate]);
   const unscheduledTasks = useMemo(() => tasks.filter((task) => !task.personalDueAt && !task.deadline && task.personalAssignmentStatus !== "COMPLETED" && task.personalAssignmentStatus !== "CANCELLED"), [tasks]);
@@ -191,36 +184,18 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
     }
   };
 
-  const editTodo = (todo?: CalendarTodo) => {
-    setTodoForm(todo ? {
-      id: todo.id,
-      title: todo.title,
-      note: todo.note ?? "",
-      dueAt: todo.dueAt ? toLocalInput(new Date(todo.dueAt)) : "",
-      allDay: todo.allDay,
-    } : emptyTodoForm());
-    setTodoOpen(true);
-  };
-
   const saveTodo = async (submitEvent: FormEvent) => {
     submitEvent.preventDefault();
-    if (!todoForm.title.trim()) return setError("请填写待办内容");
+    if (!todoTitle.trim()) return;
     setTodoSaving(true);
     setError("");
     try {
-      const response = await apiFetch<CalendarTodo>(`/calendar/todos${todoForm.id ? `/${todoForm.id}` : ""}`, {
-        method: todoForm.id ? "PATCH" : "POST",
-        body: JSON.stringify({
-          title: todoForm.title,
-          note: todoForm.note,
-          dueAt: todoForm.dueAt ? new Date(todoForm.dueAt).toISOString() : null,
-          allDay: Boolean(todoForm.dueAt && todoForm.allDay),
-        }),
+      const response = await apiFetch<CalendarTodo>("/calendar/todos", {
+        method: "POST",
+        body: JSON.stringify({ title: todoTitle }),
       });
-      setTodos((current) => todoForm.id
-        ? current.map((todo) => todo.id === todoForm.id ? response.data : todo)
-        : [...current, response.data]);
-      setTodoForm(emptyTodoForm());
+      setTodos((current) => [...current, response.data]);
+      setTodoTitle("");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "待办保存失败");
     } finally {
@@ -228,19 +203,15 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
     }
   };
 
-  const patchTodo = async (todo: CalendarTodo, patch: { dueAt?: string | null; allDay?: boolean; completed?: boolean }) => {
+  const toggleTodo = async (todo: CalendarTodo) => {
     const mutation = (todoMutationRef.current.get(todo.id) ?? 0) + 1;
     todoMutationRef.current.set(todo.id, mutation);
-    const optimistic: CalendarTodo = {
-      ...todo,
-      ...(patch.dueAt === undefined ? {} : { dueAt: patch.dueAt }),
-      ...(patch.allDay === undefined ? {} : { allDay: patch.allDay }),
-      ...(patch.completed === undefined ? {} : { completedAt: patch.completed ? new Date().toISOString() : null }),
-    };
+    const completed = !todo.completedAt;
+    const optimistic: CalendarTodo = { ...todo, completedAt: completed ? new Date().toISOString() : null };
     setTodos((current) => current.map((item) => item.id === todo.id ? optimistic : item));
     setError("");
     try {
-      const response = await apiFetch<CalendarTodo>(`/calendar/todos/${todo.id}`, { method: "PATCH", body: JSON.stringify(patch) });
+      const response = await apiFetch<CalendarTodo>(`/calendar/todos/${todo.id}`, { method: "PATCH", body: JSON.stringify({ completed }) });
       if (todoMutationRef.current.get(todo.id) === mutation) setTodos((current) => current.map((item) => item.id === todo.id ? response.data : item));
     } catch (err) {
       if (todoMutationRef.current.get(todo.id) === mutation) {
@@ -256,17 +227,11 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
     try {
       await apiFetch(`/calendar/todos/${todo.id}`, { method: "DELETE" });
       setTodos((current) => current.filter((item) => item.id !== todo.id));
-      if (todoForm.id === todo.id) setTodoForm(emptyTodoForm());
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "待办删除失败");
     } finally {
       setTodoSaving(false);
     }
-  };
-
-  const scheduleTodo = (todoId: string, dueAt: Date, allDay: boolean) => {
-    const todo = todos.find((item) => item.id === todoId);
-    if (todo) void patchTodo(todo, { dueAt: dueAt.toISOString(), allDay });
   };
 
   const moveEvent = async (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => {
@@ -328,7 +293,7 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
         <div className="calendar-navigation"><button onClick={goToday}>今天</button><button aria-label="上一段时间" onClick={() => navigate(-1)}><ChevronLeft size={18} /></button><button aria-label="下一段时间" onClick={() => navigate(1)}><ChevronRight size={18} /></button><h2>{rangeLabel(anchor, view)}</h2></div>
         <div className="calendar-toolbar-controls">
           <div className="calendar-view-tabs" role="tablist" aria-label="日历视图"><button className={view === "day" ? "active" : ""} aria-selected={view === "day"} role="tab" onClick={() => changeView("day")}>日</button><button className={view === "three-day" ? "active" : ""} aria-selected={view === "three-day"} role="tab" onClick={() => changeView("three-day")}>三日</button><button className={view === "week" ? "active" : ""} aria-selected={view === "week"} role="tab" onClick={() => changeView("week")}>周</button><button className={view === "month" ? "active" : ""} aria-selected={view === "month"} role="tab" onClick={() => changeView("month")}>月</button></div>
-          <Button className="secondary small calendar-tool-button" onClick={() => { setTodoForm(emptyTodoForm()); setTodoOpen(true); }}><ListTodo size={15} />待办{todos.filter((todo) => !todo.completedAt).length > 0 && <b>{todos.filter((todo) => !todo.completedAt).length}</b>}</Button>
+          <Button className="secondary small calendar-tool-button" onClick={() => setTodoOpen(true)}><ListTodo size={15} />待办{todos.filter((todo) => !todo.completedAt).length > 0 && <b>{todos.filter((todo) => !todo.completedAt).length}</b>}</Button>
           <details className="calendar-more-menu"><summary aria-label="更多日历设置"><MoreHorizontal size={18} /></summary><div><button aria-pressed={showChinaCalendar} className={showChinaCalendar ? "active" : ""} onClick={toggleChinaCalendar}><SunMedium size={16} /><span><strong>中国历</strong><small>{showChinaCalendar ? "正在显示节假日与节气" : "已隐藏节假日与节气"}</small></span></button><button onClick={() => setSubscriptionOpen(true)}><UserPlus size={16} /><span><strong>订阅日历</strong><small>查看彼此的时间安排</small></span>{(subscriptions?.incoming.filter((item) => item.status === "PENDING").length ?? 0) > 0 && <b>{subscriptions!.incoming.filter((item) => item.status === "PENDING").length}</b>}</button></div></details>
           <Button className="small calendar-tool-button" onClick={() => openCreate()}><Plus size={15} />新建</Button>
         </div>
@@ -337,15 +302,15 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
       <div className="calendar-content">
         <div className="calendar-main">
           {loading ? <div className="calendar-loading">正在同步你的时间安排…</div> : view === "month"
-            ? <MonthCalendar anchor={anchor} items={items} selectedDate={selectedDate} onSelect={(date) => setSelectedDate(startOfDay(date))} onCreate={(date) => openCreate(date)} onEdit={openEdit} onToggleTodo={(todo) => void patchTodo(todo, { completed: !todo.completedAt })} onScheduleTodo={scheduleTodo} />
-            : <WeekCalendar mode={view} anchor={anchor} items={items} selectedDate={selectedDate} onSelect={(date) => setSelectedDate(startOfDay(date))} onCreate={(date) => openCreate(date)} onEdit={openEdit} onMove={(event, dayDelta, minuteDelta) => void moveEvent(event, dayDelta, minuteDelta)} onResize={(event, edge, minuteDelta) => void resizeEvent(event, edge, minuteDelta)} onToggleTodo={(todo) => void patchTodo(todo, { completed: !todo.completedAt })} onScheduleTodo={scheduleTodo} />}
+            ? <MonthCalendar anchor={anchor} items={items} selectedDate={selectedDate} onSelect={(date) => setSelectedDate(startOfDay(date))} onCreate={(date) => openCreate(date)} onEdit={openEdit} />
+            : <WeekCalendar mode={view} anchor={anchor} items={items} selectedDate={selectedDate} onSelect={(date) => setSelectedDate(startOfDay(date))} onCreate={(date) => openCreate(date)} onEdit={openEdit} onMove={(event, dayDelta, minuteDelta) => void moveEvent(event, dayDelta, minuteDelta)} onResize={(event, edge, minuteDelta) => void resizeEvent(event, edge, minuteDelta)} />}
         </div>
         <aside className="calendar-agenda">
           <div className="calendar-agenda-date"><span>{weekLabels[(selectedDate.getDay() + 6) % 7]}</span><strong>{selectedDate.getDate()}</strong><small>{selectedDate.getMonth() + 1} 月</small></div>
           <div className="calendar-agenda-heading"><div><h3>{isToday(selectedDate) ? "今天的安排" : "当天安排"}</h3><p>{selectedItems.length ? `${selectedItems.length} 项日程` : "给自己留一点空白"}</p></div><button aria-label="在当天新建日程" onClick={() => openCreate(selectedDate)}><Plus size={17} /></button></div>
-          <div className="calendar-agenda-list">{selectedItems.length ? selectedItems.map((item) => <CalendarAgendaItem item={item} onEdit={openEdit} onToggleTodo={(todo) => void patchTodo(todo, { completed: !todo.completedAt })} key={item.id} />) : <div className="calendar-agenda-empty"><CalendarDays size={24} /><span>当天还没有安排</span></div>}</div>
+          <div className="calendar-agenda-list">{selectedItems.length ? selectedItems.map((item) => <CalendarAgendaItem item={item} onEdit={openEdit} key={item.id} />) : <div className="calendar-agenda-empty"><CalendarDays size={24} /><span>当天还没有安排</span></div>}</div>
           {unscheduledTasks.length > 0 && <div className="unscheduled-orders"><h3><ListTodo size={17} />待安排的事情</h3>{unscheduledTasks.slice(0, 4).map((task) => <Link href={`/tasks/${task.id}`} key={task.id}><i style={{ background: task.project.color }} /><span><strong>{task.title}</strong><small>还没有安排时间</small></span></Link>)}</div>}
-          <div className="calendar-legend"><span><i className="personal" />我的日程</span><span><i className="todo" />我的待办</span><span><i className="subscribed" />共享日程</span><span><i className="order" />清单</span><span><i className="entry" />手帐</span>{showChinaCalendar && <span><i className="china-calendar" />中国历</span>}</div>
+          <div className="calendar-legend"><span><i className="personal" />我的日程</span><span><i className="subscribed" />共享日程</span><span><i className="order" />清单</span><span><i className="entry" />手帐</span>{showChinaCalendar && <span><i className="china-calendar" />中国历</span>}</div>
         </aside>
       </div>
     </section>
@@ -362,15 +327,14 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
       </section>
     </div>}
     {todoOpen && <TodoDrawer
-      form={todoForm}
       saving={todoSaving}
+      title={todoTitle}
       todos={todos}
-      onChange={setTodoForm}
-      onClose={() => { setTodoOpen(false); setTodoForm(emptyTodoForm()); }}
+      onChange={setTodoTitle}
+      onClose={() => setTodoOpen(false)}
       onDelete={(todo) => void removeTodo(todo)}
-      onEdit={editTodo}
       onSubmit={(event) => void saveTodo(event)}
-      onToggle={(todo) => void patchTodo(todo, { completed: !todo.completedAt })}
+      onToggle={(todo) => void toggleTodo(todo)}
     />}
     {subscriptionOpen && <SubscriptionDialog
       busy={subscriptionBusy}
@@ -383,45 +347,40 @@ export function CalendarWorkspace({ openSubscriptions = false }: { openSubscript
   </div>;
 }
 
-function TodoDrawer({ form, saving, todos, onChange, onClose, onDelete, onEdit, onSubmit, onToggle }: {
-  form: TodoForm;
+function TodoDrawer({ saving, title, todos, onChange, onClose, onDelete, onSubmit, onToggle }: {
   saving: boolean;
+  title: string;
   todos: CalendarTodo[];
-  onChange: (form: TodoForm) => void;
+  onChange: (title: string) => void;
   onClose: () => void;
   onDelete: (todo: CalendarTodo) => void;
-  onEdit: (todo?: CalendarTodo) => void;
   onSubmit: (event: FormEvent) => void;
   onToggle: (todo: CalendarTodo) => void;
 }) {
-  const groups = groupCalendarTodos(todos);
+  const active = todos.filter((todo) => !todo.completedAt);
+  const completed = todos.filter((todo) => Boolean(todo.completedAt));
   return <div className="calendar-todo-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="calendar-todo-drawer" role="dialog" aria-modal="false" aria-labelledby="calendar-todo-title">
-      <header><div><span className="eyebrow">MY TODO</span><h2 id="calendar-todo-title">我的待办</h2><p>拖到日历即可排期；手机上可直接选择时间。</p></div><button aria-label="关闭待办" onClick={onClose}><X size={20} /></button></header>
+    <section className="calendar-todo-drawer" role="dialog" aria-modal="true" aria-labelledby="calendar-todo-title">
+      <header><div><span className="eyebrow">MY TODO</span><h2 id="calendar-todo-title">我的待办</h2></div><button aria-label="关闭待办" onClick={onClose}><X size={20} /></button></header>
       <form className="calendar-todo-form" onSubmit={onSubmit}>
-        <Input autoFocus maxLength={160} placeholder="要做什么？" value={form.title} onChange={(event) => onChange({ ...form, title: event.target.value })} />
-        <Textarea maxLength={1000} placeholder="备注（可选）" value={form.note} onChange={(event) => onChange({ ...form, note: event.target.value })} />
-        <div className="calendar-todo-schedule"><Input aria-label="待办时间" type="datetime-local" value={form.dueAt} onChange={(event) => onChange({ ...form, dueAt: event.target.value, allDay: false })} /><label><input checked={form.allDay} disabled={!form.dueAt} type="checkbox" onChange={(event) => onChange({ ...form, allDay: event.target.checked })} />全天</label></div>
-        <div className="calendar-todo-form-actions">{form.id && <button className="calendar-todo-delete" disabled={saving} onClick={() => { const todo = todos.find((item) => item.id === form.id); if (todo) onDelete(todo); }} type="button"><Trash2 size={15} />删除</button>}<span /><Button className="secondary small" onClick={() => onEdit()} type="button">清空</Button><Button className="small" disabled={saving} type="submit">{saving ? "保存中…" : form.id ? "保存" : "添加"}</Button></div>
+        <Input aria-label="新增待办" autoFocus maxLength={160} placeholder="写下待办，按回车添加" value={title} onChange={(event) => onChange(event.target.value)} />
+        <Button className="small" disabled={saving || !title.trim()} type="submit"><Plus size={15} />{saving ? "添加中…" : "添加"}</Button>
       </form>
       <div className="calendar-todo-list">
-        <TodoGroup title="今天与逾期" todos={groups.today} onEdit={onEdit} onToggle={onToggle} />
-        <TodoGroup title="接下来" todos={groups.upcoming} onEdit={onEdit} onToggle={onToggle} />
-        <TodoGroup title="还没排期" todos={groups.unscheduled} onEdit={onEdit} onToggle={onToggle} />
-        {groups.completed.length > 0 && <details className="calendar-todo-completed"><summary>已完成 · {groups.completed.length}</summary><TodoGroup todos={groups.completed} onEdit={onEdit} onToggle={onToggle} /></details>}
+        <TodoGroup title="待完成" todos={active} onDelete={onDelete} onToggle={onToggle} />
+        {completed.length > 0 && <details className="calendar-todo-completed"><summary>已完成 · {completed.length}</summary><TodoGroup todos={completed} onDelete={onDelete} onToggle={onToggle} /></details>}
         {!todos.length && <div className="calendar-todo-empty"><ListTodo size={25} /><span>写下第一件要做的事</span></div>}
       </div>
     </section>
   </div>;
 }
 
-function TodoGroup({ title, todos, onEdit, onToggle }: { title?: string; todos: CalendarTodo[]; onEdit: (todo?: CalendarTodo) => void; onToggle: (todo: CalendarTodo) => void }) {
+function TodoGroup({ title, todos, onDelete, onToggle }: { title?: string; todos: CalendarTodo[]; onDelete: (todo: CalendarTodo) => void; onToggle: (todo: CalendarTodo) => void }) {
   if (!todos.length) return null;
-  return <section className="calendar-todo-group">{title && <h3>{title}<b>{todos.length}</b></h3>}{todos.map((todo) => <article className={todo.completedAt ? "completed" : ""} draggable={!todo.completedAt} key={todo.id} onDragStart={(event) => beginTodoDrag(event, todo.id)}>
-    <GripVertical aria-hidden="true" className="calendar-todo-grip" size={15} />
+  return <section className="calendar-todo-group">{title && <h3>{title}<b>{todos.length}</b></h3>}{todos.map((todo) => <article className={todo.completedAt ? "completed" : ""} key={todo.id}>
     <button aria-label={todo.completedAt ? `重新打开${todo.title}` : `完成${todo.title}`} aria-checked={Boolean(todo.completedAt)} className="calendar-todo-check" onClick={() => onToggle(todo)} role="checkbox" type="button">{todo.completedAt && <Check size={13} />}</button>
-    <button className="calendar-todo-copy" onClick={() => onEdit(todo)} type="button"><strong>{todo.title}</strong>{todo.note && <small>{todo.note}</small>}<time>{todo.dueAt ? todoTimeLabel(todo) : "拖到日历安排时间"}</time></button>
-    <button aria-label={`编辑${todo.title}`} className="calendar-todo-edit" onClick={() => onEdit(todo)} type="button"><Pencil size={14} /></button>
+    <span className="calendar-todo-copy"><strong>{todo.title}</strong></span>
+    <button aria-label={`删除${todo.title}`} className="calendar-todo-delete" onClick={() => onDelete(todo)} type="button"><Trash2 size={15} /></button>
   </article>)}</section>;
 }
 
@@ -458,19 +417,19 @@ function MemberIdentity({ user, projects }: { user: { displayName: string; usern
   return <div className="subscription-member"><span aria-hidden="true">{user.displayName.slice(0, 1).toUpperCase()}</span><div><strong>{user.displayName}</strong><small>{projects?.length ? projects.join(" · ") : `@${user.username}`}</small></div></div>;
 }
 
-function MonthCalendar({ anchor, items, selectedDate, onSelect, onCreate, onEdit, onToggleTodo, onScheduleTodo }: { anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void; onToggleTodo: (todo: CalendarTodo) => void; onScheduleTodo: (todoId: string, dueAt: Date, allDay: boolean) => void }) {
+function MonthCalendar({ anchor, items, selectedDate, onSelect, onCreate, onEdit }: { anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void }) {
   const start = startOfWeek(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
   const days = Array.from({ length: 42 }, (_, index) => addDays(start, index));
   return <div className="calendar-month"><div className="calendar-week-labels">{weekLabels.map((label) => <span key={label}>{label}</span>)}</div><div className="calendar-month-grid">{days.map((day) => {
     const dayItems = items.filter((item) => occursOn(item, day));
-    return <div className={`calendar-month-day${day.getMonth() !== anchor.getMonth() ? " outside" : ""}${isSameDay(day, selectedDate) ? " selected" : ""}`} key={day.toISOString()} onClick={() => onSelect(day)} onDragOver={(event) => allowTodoDrop(event)} onDrop={(event) => { const todoId = readTodoDrop(event); if (todoId) onScheduleTodo(todoId, startOfDay(day), true); }}>
+    return <div className={`calendar-month-day${day.getMonth() !== anchor.getMonth() ? " outside" : ""}${isSameDay(day, selectedDate) ? " selected" : ""}`} key={day.toISOString()} onClick={() => onSelect(day)}>
       <header><span className={isToday(day) ? "today" : ""}>{day.getDate()}</span><button aria-label={`${formatDate(day)}新建日程`} onClick={(event) => { event.stopPropagation(); onCreate(day); }}><Plus size={14} /></button></header>
-      <div className="calendar-month-events">{dayItems.slice(0, 3).map((item) => <CalendarPill item={item} onEdit={onEdit} onToggleTodo={onToggleTodo} key={item.id} />)}{dayItems.length > 3 && <span className="calendar-more">另有 {dayItems.length - 3} 项</span>}</div>
+      <div className="calendar-month-events">{dayItems.slice(0, 3).map((item) => <CalendarPill item={item} onEdit={onEdit} key={item.id} />)}{dayItems.length > 3 && <span className="calendar-more">另有 {dayItems.length - 3} 项</span>}</div>
     </div>;
   })}</div></div>;
 }
 
-function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, onEdit, onMove, onResize, onToggleTodo, onScheduleTodo }: { mode: Exclude<CalendarView, "month">; anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; onResize: (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => void; onToggleTodo: (todo: CalendarTodo) => void; onScheduleTodo: (todoId: string, dueAt: Date, allDay: boolean) => void }) {
+function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, onEdit, onMove, onResize }: { mode: Exclude<CalendarView, "month">; anchor: Date; items: CalendarItem[]; selectedDate: Date; onSelect: (date: Date) => void; onCreate: (date: Date) => void; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; onResize: (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => void }) {
   const days = useMemo(() => {
     const start = mode === "week" ? startOfWeek(anchor) : startOfDay(anchor);
     const length = mode === "day" ? 1 : mode === "three-day" ? 3 : 7;
@@ -488,36 +447,33 @@ function WeekCalendar({ mode, anchor, items, selectedDate, onSelect, onCreate, o
   }, [currentMinutes, days]);
   return <div className={`calendar-week${mode === "day" ? " single-day" : mode === "three-day" ? " three-day" : ""}`}>
     <div className="calendar-week-header" style={headerStyle}><span />{days.map((day) => <button className={`${isToday(day) ? "today" : ""}${isSameDay(day, selectedDate) ? " selected" : ""}`} key={day.toISOString()} onClick={() => onSelect(day)}><small>{weekLabels[(day.getDay() + 6) % 7]}</small><strong>{day.getDate()}</strong></button>)}</div>
-    <div className="calendar-week-all-day" style={headerStyle}><span>全天</span>{days.map((day) => <div key={day.toISOString()} onDragOver={(event) => allowTodoDrop(event)} onDrop={(event) => { const todoId = readTodoDrop(event); if (todoId) onScheduleTodo(todoId, startOfDay(day), true); }}>{items.filter((item) => item.allDay && occursOn(item, day)).map((item) => <CalendarAllDayItem item={item} onToggleTodo={onToggleTodo} key={item.id} />)}</div>)}</div>
-    <div className="calendar-week-scroll" ref={scrollRef}><div className="calendar-time-labels">{hours.map((hour) => <span style={{ top: hour * 60 }} key={hour}>{`${String(hour).padStart(2, "0")}:00`}</span>)}</div><div className="calendar-week-columns" style={columnStyle}>{days.map((day) => <div className="calendar-week-day" key={day.toISOString()} onDoubleClick={(event) => onCreate(withHour(day, Math.floor(event.nativeEvent.offsetY / 60)))} onDragOver={(event) => allowTodoDrop(event)} onDrop={(event) => { const todoId = readTodoDrop(event); if (todoId) onScheduleTodo(todoId, calendarTodoDropTime(day, event.clientY - event.currentTarget.getBoundingClientRect().top), false); }}>{hours.map((hour) => <i style={{ top: hour * 60 }} key={hour} />)}{isToday(day) && <b className="calendar-current-time" aria-label="当前时间" style={{ top: currentMinutes }} />}{items.filter((item) => !item.allDay && occursOn(item, day)).map((item) => <WeekEvent item={item} onEdit={onEdit} onMove={onMove} onResize={onResize} onToggleTodo={onToggleTodo} key={item.id} />)}</div>)}</div></div>
+    <div className="calendar-week-all-day" style={headerStyle}><span>全天</span>{days.map((day) => <div key={day.toISOString()}>{items.filter((item) => item.allDay && occursOn(item, day)).map((item) => <CalendarAllDayItem item={item} key={item.id} />)}</div>)}</div>
+    <div className="calendar-week-scroll" ref={scrollRef}><div className="calendar-time-labels">{hours.map((hour) => <span style={{ top: hour * 60 }} key={hour}>{`${String(hour).padStart(2, "0")}:00`}</span>)}</div><div className="calendar-week-columns" style={columnStyle}>{days.map((day) => <div className="calendar-week-day" key={day.toISOString()} onDoubleClick={(event) => onCreate(withHour(day, Math.floor(event.nativeEvent.offsetY / 60)))}>{hours.map((hour) => <i style={{ top: hour * 60 }} key={hour} />)}{isToday(day) && <b className="calendar-current-time" aria-label="当前时间" style={{ top: currentMinutes }} />}{items.filter((item) => !item.allDay && occursOn(item, day)).map((item) => <WeekEvent item={item} onEdit={onEdit} onMove={onMove} onResize={onResize} key={item.id} />)}</div>)}</div></div>
   </div>;
 }
 
-function CalendarPill({ item, onEdit, onToggleTodo }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onToggleTodo: (todo: CalendarTodo) => void }) {
+function CalendarPill({ item, onEdit }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void }) {
   const content = <><i style={{ background: item.color }} />{!item.allDay && <span>{formatTime(item.start)}</span>}<span className="calendar-pill-copy"><strong>{item.title}</strong>{item.description && <small>{item.description}</small>}</span></>;
   if (item.source === "entry") return <Link className="calendar-pill entry" href={`/journal?entry=${item.entry!.id}`} onClick={(event) => event.stopPropagation()}>{content}</Link>;
   if (item.source === "task") return <Link className="calendar-pill task" href={`/tasks/${item.task!.id}`} onClick={(event) => event.stopPropagation()}>{content}</Link>;
-  if (item.source === "todo") return <button className="calendar-pill todo" title="点击完成待办" onClick={(event) => { event.stopPropagation(); onToggleTodo(item.todo!); }}>{content}</button>;
   if (item.source === "personal") return <button className="calendar-pill personal" onClick={(event) => { event.stopPropagation(); onEdit(item.event!); }}>{content}</button>;
   if (item.source === "china-calendar") return <div className={`calendar-pill china-calendar ${item.calendarKind}`} title="中国历">{content}</div>;
   return <div className="calendar-pill subscribed" title={`${item.ownerName}的日程`}>{content}</div>;
 }
 
-function CalendarAllDayItem({ item, onToggleTodo }: { item: CalendarItem; onToggleTodo: (todo: CalendarTodo) => void }) {
+function CalendarAllDayItem({ item }: { item: CalendarItem }) {
   const content = <><i style={{ background: item.color }} />{item.title}</>;
   if (item.source === "entry") return <Link href={`/journal?entry=${item.entry!.id}`}>{content}</Link>;
-  if (item.source === "todo") return <button className="todo" onClick={() => onToggleTodo(item.todo!)} type="button">{content}</button>;
   return <span className={item.source === "china-calendar" ? `china-calendar ${item.calendarKind}` : ""}>{content}</span>;
 }
 
-function WeekEvent({ item, onEdit, onMove, onResize, onToggleTodo }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; onResize: (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => void; onToggleTodo: (todo: CalendarTodo) => void }) {
+function WeekEvent({ item, onEdit, onMove, onResize }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onMove: (event: PersonalCalendarEvent, dayDelta: number, minuteDelta: number) => void; onResize: (event: PersonalCalendarEvent, edge: "start" | "end", minuteDelta: number) => void }) {
   const minutes = item.start.getHours() * 60 + item.start.getMinutes();
   const duration = Math.max(20, Math.min((item.end.getTime() - item.start.getTime()) / 60_000, 24 * 60 - minutes));
   const style = { top: minutes, height: duration, borderColor: item.color, background: `${item.color}18` };
   const content = <><strong>{item.title}</strong><small>{formatTime(item.start)}–{formatTime(item.end)}</small>{item.description && <small className="calendar-event-note">{item.description}</small>}</>;
   if (item.source === "entry") return <Link className="calendar-week-event entry" href={`/journal?entry=${item.entry!.id}`} style={style}>{content}</Link>;
   if (item.source === "task") return <Link className="calendar-week-event task" href={`/tasks/${item.task!.id}`} style={style}>{content}</Link>;
-  if (item.source === "todo") return <button className="calendar-week-event todo" onClick={() => onToggleTodo(item.todo!)} style={style} type="button">{content}</button>;
   if (item.source === "personal") return <DraggableWeekEvent item={item} onEdit={onEdit} onMove={onMove} onResize={onResize} style={style}>{content}</DraggableWeekEvent>;
   return <div className="calendar-week-event subscribed" style={style}>{content}<small>{item.ownerName}</small></div>;
 }
@@ -614,11 +570,10 @@ function DraggableWeekEvent({ item, onEdit, onMove, onResize, style, children }:
   </div>;
 }
 
-function CalendarAgendaItem({ item, onEdit, onToggleTodo }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void; onToggleTodo: (todo: CalendarTodo) => void }) {
-  const content = <><i style={{ background: item.color }} /><span><small>{item.source === "china-calendar" ? chinaCalendarKindLabel(item.calendarKind) : item.source === "todo" ? item.allDay ? "全天待办" : formatTime(item.start) : item.allDay ? "当天手帐" : `${formatTime(item.start)}–${formatTime(item.end)}`}</small><strong>{item.title}</strong>{item.description && <em className="calendar-agenda-note">{item.description}</em>}{item.task && <em>{item.task.project.name} · {personalTaskTimeLabel(item.task)}</em>}{item.source === "subscribed" && <em>{item.ownerName}的日程</em>}</span></>;
+function CalendarAgendaItem({ item, onEdit }: { item: CalendarItem; onEdit: (event: PersonalCalendarEvent) => void }) {
+  const content = <><i style={{ background: item.color }} /><span><small>{item.source === "china-calendar" ? chinaCalendarKindLabel(item.calendarKind) : item.allDay ? "当天手帐" : `${formatTime(item.start)}–${formatTime(item.end)}`}</small><strong>{item.title}</strong>{item.description && <em className="calendar-agenda-note">{item.description}</em>}{item.task && <em>{item.task.project.name} · {personalTaskTimeLabel(item.task)}</em>}{item.source === "subscribed" && <em>{item.ownerName}的日程</em>}</span></>;
   if (item.source === "entry") return <Link href={`/journal?entry=${item.entry!.id}`}>{content}</Link>;
   if (item.source === "task") return <Link href={`/tasks/${item.task!.id}`}>{content}</Link>;
-  if (item.source === "todo") return <button className="todo" onClick={() => onToggleTodo(item.todo!)}>{content}</button>;
   if (item.source === "personal") return <button onClick={() => onEdit(item.event!)}>{content}</button>;
   return <div className={item.source === "china-calendar" ? "china-calendar" : "subscribed"}>{content}</div>;
 }
@@ -637,23 +592,6 @@ export function calendarRange(anchor: Date, view: CalendarView) {
 function startOfWeek(value: Date) { const date = startOfDay(value); return addDays(date, -((date.getDay() + 6) % 7)); }
 function startOfDay(value: Date) { return new Date(value.getFullYear(), value.getMonth(), value.getDate()); }
 function addDays(value: Date, amount: number) { const date = new Date(value); date.setDate(date.getDate() + amount); return date; }
-export function calendarTodoDropTime(day: Date, offsetY: number) {
-  const minutes = Math.max(0, Math.min(23 * 60 + 45, Math.round(offsetY / 15) * 15));
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), Math.floor(minutes / 60), minutes % 60);
-}
-export function groupCalendarTodos(todos: CalendarTodo[], now = new Date()) {
-  const tomorrow = addDays(startOfDay(now), 1);
-  return {
-    today: todos.filter((todo) => !todo.completedAt && todo.dueAt && new Date(todo.dueAt) < tomorrow),
-    upcoming: todos.filter((todo) => !todo.completedAt && todo.dueAt && new Date(todo.dueAt) >= tomorrow),
-    unscheduled: todos.filter((todo) => !todo.completedAt && !todo.dueAt),
-    completed: todos.filter((todo) => Boolean(todo.completedAt)).sort((left, right) => new Date(right.completedAt!).getTime() - new Date(left.completedAt!).getTime()),
-  };
-}
-function beginTodoDrag(event: DragEvent<HTMLElement>, todoId: string) { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-la-vie-todo", todoId); }
-function allowTodoDrop(event: DragEvent<HTMLElement>) { if (event.dataTransfer.types.includes("application/x-la-vie-todo")) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }
-function readTodoDrop(event: DragEvent<HTMLElement>) { event.preventDefault(); return event.dataTransfer.getData("application/x-la-vie-todo"); }
-function todoTimeLabel(todo: CalendarTodo) { const date = new Date(todo.dueAt!); return todo.allDay ? `${formatDate(date)} · 全天` : `${formatDate(date)} ${formatTime(date)}`; }
 function shiftCalendarTime(value: Date, dayDelta: number, minuteDelta: number) { const date = addDays(value, dayDelta); date.setMinutes(date.getMinutes() + minuteDelta); return date; }
 export function resizeCalendarRange(startsAt: Date, endsAt: Date, edge: "start" | "end", minuteDelta: number) {
   const minimumDuration = 15 * 60_000;
@@ -672,6 +610,5 @@ function formatDate(value: Date) { return new Intl.DateTimeFormat("zh-CN", { mon
 export function rangeLabel(anchor: Date, view: CalendarView) { if (view === "month") return `${anchor.getFullYear()} 年 ${anchor.getMonth() + 1} 月`; if (view === "day") return formatDate(anchor); const start = view === "three-day" ? startOfDay(anchor) : startOfWeek(anchor); const end = addDays(start, view === "three-day" ? 2 : 6); return `${start.getMonth() + 1}月${start.getDate()}日 – ${end.getMonth() + 1}月${end.getDate()}日`; }
 function toLocalInput(value: Date) { const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000); return local.toISOString().slice(0, 16); }
 function eventFormFor(value: Date): EventForm { const start = new Date(value.getFullYear(), value.getMonth(), value.getDate(), value.getHours() || 9, 0); if (start < new Date() && isToday(start)) start.setHours(new Date().getHours() + 1, 0, 0, 0); const end = new Date(start.getTime() + 60 * 60_000); return { title: "", description: "", startsAt: toLocalInput(start), endsAt: toLocalInput(end), color: "#958ab8" }; }
-function emptyTodoForm(): TodoForm { return { id: null, title: "", note: "", dueAt: "", allDay: false }; }
 function withHour(value: Date, hour: number) { return new Date(value.getFullYear(), value.getMonth(), value.getDate(), Math.min(23, Math.max(0, hour)), 0); }
 function localDateKey(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`; }
