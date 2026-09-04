@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { JournalWorkspace, parseMarkdown, upsertEntryIndex } from "./journal-workspace";
+import { JournalWorkspace, journalAuthorTone, parseMarkdown, upsertEntryIndex } from "./journal-workspace";
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }));
 
@@ -42,6 +42,14 @@ beforeEach(() => {
 });
 
 describe("JournalWorkspace", () => {
+  it("assigns stable, distinct colors to the two journal authors", () => {
+    const cristina = records[0].createdBy;
+    const yinghuo = records[1].createdBy;
+
+    expect(journalAuthorTone(cristina)).toBe(journalAuthorTone({ ...cristina }));
+    expect(journalAuthorTone(cristina)).not.toBe(journalAuthorTone(yinghuo));
+  });
+
   it("treats every natural line break as a separate journal paragraph", () => {
     expect(parseMarkdown("第一段\n第二段\n\n第三段")).toEqual([
       { type: "paragraph", text: "第一段" },
