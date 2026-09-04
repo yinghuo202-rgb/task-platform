@@ -47,6 +47,19 @@ export type CalendarFeedEvent = CalendarEvent & {
   editable: boolean;
 };
 
+export type CalendarTodo = {
+  id: string;
+  userId: string;
+  title: string;
+  note: string | null;
+  dueAt: string | null;
+  allDay: boolean;
+  completedAt: string | null;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CalendarSubscriptionStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type CalendarSubscription = {

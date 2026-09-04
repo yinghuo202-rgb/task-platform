@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   User: 'User',
   CalendarEvent: 'CalendarEvent',
+  CalendarTodo: 'CalendarTodo',
   Entry: 'Entry',
   EntryVersion: 'EntryVersion',
   EntryComment: 'EntryComment',
@@ -122,6 +123,22 @@ export const CalendarEventScalarFieldEnum = {
 } as const
 
 export type CalendarEventScalarFieldEnum = (typeof CalendarEventScalarFieldEnum)[keyof typeof CalendarEventScalarFieldEnum]
+
+
+export const CalendarTodoScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  title: 'title',
+  note: 'note',
+  dueAt: 'dueAt',
+  allDay: 'allDay',
+  completedAt: 'completedAt',
+  position: 'position',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CalendarTodoScalarFieldEnum = (typeof CalendarTodoScalarFieldEnum)[keyof typeof CalendarTodoScalarFieldEnum]
 
 
 export const EntryScalarFieldEnum = {

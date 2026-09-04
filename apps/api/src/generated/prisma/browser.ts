@@ -28,6 +28,11 @@ export type User = Prisma.UserModel
  */
 export type CalendarEvent = Prisma.CalendarEventModel
 /**
+ * Model CalendarTodo
+ *
+ */
+export type CalendarTodo = Prisma.CalendarTodoModel
+/**
  * Model Entry
  *
  */

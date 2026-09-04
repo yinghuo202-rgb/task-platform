@@ -157,6 +157,7 @@ model User {
   notifications Notification[]
   auditLogs    AuditLog[]
   calendarEvents CalendarEvent[]
+  calendarTodos CalendarTodo[]
   outgoingCalendarSubscriptions CalendarSubscription[] @relation("CalendarSubscriber")
   incomingCalendarSubscriptions CalendarSubscription[] @relation("CalendarOwner")
   createdEntries Entry[]        @relation("EntryCreatedBy")
@@ -186,6 +187,25 @@ model CalendarEvent {
   @@index([userId, startsAt])
   @@index([userId, endsAt])
   @@map("calendar_events")
+}
+
+model CalendarTodo {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  title       String    @db.VarChar(160)
+  note        String?   @db.VarChar(1000)
+  dueAt       DateTime? @db.Timestamptz(3)
+  allDay      Boolean   @default(false)
+  completedAt DateTime? @db.Timestamptz(3)
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, completedAt, dueAt])
+  @@index([userId, position])
+  @@map("calendar_todos")
 }
 
 model Entry {

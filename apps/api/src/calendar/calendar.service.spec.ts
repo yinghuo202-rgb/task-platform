@@ -50,6 +50,46 @@ describe("CalendarService", () => {
     expect(remove).not.toHaveBeenCalled();
   });
 
+  it("lists only the current user's personal todos", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const service = new CalendarService({ calendarTodo: { findMany } } as unknown as PrismaService);
+
+    await service.listTodos(userId);
+
+    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId } }));
+  });
+
+  it("creates a trimmed todo that can be placed on the calendar", async () => {
+    const create = vi.fn().mockResolvedValue({ id: "todo-id" });
+    const service = new CalendarService({ calendarTodo: { create } } as unknown as PrismaService);
+
+    await service.createTodo(userId, {
+      title: "  买牛奶  ",
+      note: "  记得买低脂的  ",
+      dueAt: "2026-09-04T10:00:00.000Z",
+      allDay: false,
+    });
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId,
+        title: "买牛奶",
+        note: "记得买低脂的",
+        dueAt: new Date("2026-09-04T10:00:00.000Z"),
+        allDay: false,
+      }),
+    });
+  });
+
+  it("does not update another user's todo", async () => {
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const update = vi.fn();
+    const service = new CalendarService({ calendarTodo: { findFirst, update } } as unknown as PrismaService);
+
+    await expect(service.updateTodo(userId, "22222222-2222-4222-8222-222222222222", { completed: true })).rejects.toThrow("待办不存在");
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("includes only approved shared-project subscriptions in the calendar feed", async () => {
     const subscriptionFindMany = vi.fn().mockResolvedValue([{ ownerId: "22222222-2222-4222-8222-222222222222" }]);
     const eventFindMany = vi.fn().mockResolvedValue([]);
